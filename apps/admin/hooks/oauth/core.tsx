@@ -13,6 +13,7 @@ import type {
 } from "@plane/types";
 // assets
 import giteaLogo from "@/app/assets/logos/gitea-logo.svg?url";
+import microsoftLogo from "@/app/assets/logos/microsoft-logo.svg?url";
 import githubLightModeImage from "@/app/assets/logos/github-black.png?url";
 import githubDarkModeImage from "@/app/assets/logos/github-white.png?url";
 import gitlabLogo from "@/app/assets/logos/gitlab-logo.svg?url";
@@ -20,6 +21,7 @@ import googleLogo from "@/app/assets/logos/google-logo.svg?url";
 // components
 import { EmailCodesConfiguration } from "@/components/authentication/email-config-switch";
 import { GiteaConfiguration } from "@/components/authentication/gitea-config";
+import { MicrosoftConfiguration } from "@/components/authentication/microsoft-config";
 import { GithubConfiguration } from "@/components/authentication/github-config";
 import { GitlabConfiguration } from "@/components/authentication/gitlab-config";
 import { GoogleConfiguration } from "@/components/authentication/google-config";
@@ -88,5 +90,13 @@ export const getCoreAuthenticationModesMap: (
     icon: <img src={giteaLogo} height={20} width={20} alt="Gitea Logo" />,
     config: <GiteaConfiguration disabled={disabled} updateConfig={updateConfig} />,
     enabledConfigKey: "IS_GITEA_ENABLED",
+  },
+  microsoft: {
+    key: "microsoft",
+    name: "Microsoft",
+    description: "Allow members to log in or sign up to plane with their Microsoft accounts.",
+    icon: <img src={microsoftLogo} height={20} width={20} alt="Microsoft Logo" />,
+    config: <MicrosoftConfiguration disabled={disabled} updateConfig={updateConfig} />,
+    enabledConfigKey: "IS_MICROSOFT_ENABLED",
   },
 });

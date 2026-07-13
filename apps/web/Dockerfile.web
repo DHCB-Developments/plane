@@ -70,7 +70,7 @@ ENV VITE_WEB_BASE_URL=$VITE_WEB_BASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
 
-RUN pnpm turbo run build --filter=web
+RUN --mount=type=cache,id=turbo-web,target=/app/.turbo pnpm turbo run build --filter=web
 
 # *****************************************************************************
 # STAGE 3: Serve with nginx

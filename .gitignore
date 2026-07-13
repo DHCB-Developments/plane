@@ -52,6 +52,8 @@ venv
 .venv
 *.pyc
 staticfiles
+# Django collectstatic output (STATIC_ROOT) — generated at container startup
+apps/api/plane/static-assets/collected-static/
 mediafiles
 .env
 .DS_Store

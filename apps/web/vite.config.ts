@@ -32,7 +32,20 @@ export default defineConfig(() => ({
     dedupe: ["react", "react-dom", "@headlessui/react"],
   },
   server: {
-    host: "127.0.0.1",
+    host: process.env.VITE_DEV_HOST ?? "127.0.0.1",
+    // When served through the Caddy proxy in dev (VITE_DEV_ALLOWED_HOST set),
+    // allow the proxied Host header and point HMR at the public wss endpoint.
+    ...(process.env.VITE_DEV_ALLOWED_HOST
+      ? {
+          allowedHosts: [process.env.VITE_DEV_ALLOWED_HOST],
+          hmr: {
+            protocol: "wss",
+            host: process.env.VITE_DEV_ALLOWED_HOST,
+            clientPort: 443,
+            ...(process.env.VITE_DEV_HMR_PATH ? { path: process.env.VITE_DEV_HMR_PATH } : {}),
+          },
+        }
+      : {}),
   },
   // No SSR-specific overrides needed; alias resolves to ESM build
 }));
