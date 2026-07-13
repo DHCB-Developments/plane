@@ -31,6 +31,13 @@ type Props = {
 
 type MicrosoftConfigFormValues = Record<TInstanceMicrosoftAuthenticationConfigurationKeys, string>;
 
+// Static field config with no dependency on component state — kept at module scope
+// so it isn't rebuilt every render (react-doctor: prefer-module-scope-static-value).
+const MICROSOFT_FORM_SWITCH_FIELD: TControllerSwitchFormField<MicrosoftConfigFormValues> = {
+  name: "ENABLE_MICROSOFT_SYNC",
+  label: "Microsoft",
+};
+
 export function InstanceMicrosoftConfigForm(props: Props) {
   const { config } = props;
   // states
@@ -116,11 +123,6 @@ export function InstanceMicrosoftConfigForm(props: Props) {
       required: true,
     },
   ];
-
-  const MICROSOFT_FORM_SWITCH_FIELD: TControllerSwitchFormField<MicrosoftConfigFormValues> = {
-    name: "ENABLE_MICROSOFT_SYNC",
-    label: "Microsoft",
-  };
 
   const MICROSOFT_SERVICE_FIELD: TCopyField[] = [
     {
