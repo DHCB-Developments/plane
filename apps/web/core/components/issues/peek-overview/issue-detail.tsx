@@ -1,4 +1,9 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 // plane imports
@@ -20,7 +25,7 @@ import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 import { DeDupeIssuePopoverRoot } from "@/plane-web/components/de-dupe/duplicate-popover";
 import { IssueTypeSwitcher } from "@/plane-web/components/issues/issue-details/issue-type-switcher";
 // plane web hooks
-import { useDebouncedDuplicateIssues } from "@/plane-web/hooks/use-debounced-duplicate-issues";
+import { useDebouncedDuplicateIssues } from "@/hooks/use-debounced-duplicate-issues";
 // services
 import { WorkItemVersionService } from "@/services/issue";
 // local components
@@ -57,14 +62,14 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting");
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     if (isSubmitting === "submitted") {
       setShowAlert(false);
-      setTimeout(async () => {
-        setIsSubmitting("saved");
-      }, 2000);
+      timer = setTimeout(() => setIsSubmitting("saved"), 2000);
     } else if (isSubmitting === "submitting") {
       setShowAlert(true);
     }
+    return () => clearTimeout(timer);
   }, [isSubmitting, setShowAlert, setIsSubmitting]);
 
   // derived values
@@ -134,10 +139,11 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
         entityId={issue.id}
         fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
         initialValue={issueDescription}
+        key={issue.id}
         onSubmit={async (value, isMigrationUpdate) => {
           if (!issue.id || !issue.project_id) return;
           await issueOperations.update(workspaceSlug, issue.project_id, issue.id, {
-            description_html: value,
+            description_html: value.description_html,
             ...(isMigrationUpdate ? { skip_activity: "true" } : {}),
           });
         }}

@@ -1,17 +1,17 @@
-import type { FC, MouseEvent } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import type { MouseEvent } from "react";
 import React, { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Eye, ArrowRight, CalendarDays } from "lucide-react";
 // plane imports
-import {
-  CYCLE_TRACKER_EVENTS,
-  EUserPermissions,
-  EUserPermissionsLevel,
-  IS_FAVORITE_MENU_OPEN,
-  CYCLE_TRACKER_ELEMENTS,
-} from "@plane/constants";
+import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
 import { useLocalStorage } from "@plane/hooks";
 import { useTranslation } from "@plane/i18n";
 import { TransferIcon, WorkItemsIcon, MembersPropertyIcon } from "@plane/propel/icons";
@@ -25,7 +25,6 @@ import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 import { MergedDateDisplay } from "@/components/dropdowns/merged-date";
 // hooks
-import { captureError, captureSuccess } from "@/helpers/event-tracker.helper";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -109,25 +108,11 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const addToFavoritePromise = addCycleToFavorites(workspaceSlug?.toString(), projectId.toString(), cycleId)
-      .then(() => {
+    const addToFavoritePromise = addCycleToFavorites(workspaceSlug?.toString(), projectId.toString(), cycleId).then(
+      () => {
         if (!isFavoriteMenuOpen) toggleFavoriteMenu(true);
-        captureSuccess({
-          eventName: CYCLE_TRACKER_EVENTS.favorite,
-          payload: {
-            id: cycleId,
-          },
-        });
-      })
-      .catch((error) => {
-        captureError({
-          eventName: CYCLE_TRACKER_EVENTS.favorite,
-          payload: {
-            id: cycleId,
-          },
-          error,
-        });
-      });
+      }
+    );
 
     setPromiseToast(addToFavoritePromise, {
       loading: t("project_cycles.action.favorite.loading"),
@@ -146,24 +131,11 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const removeFromFavoritePromise = removeCycleFromFavorites(workspaceSlug?.toString(), projectId.toString(), cycleId)
-      .then(() => {
-        captureSuccess({
-          eventName: CYCLE_TRACKER_EVENTS.unfavorite,
-          payload: {
-            id: cycleId,
-          },
-        });
-      })
-      .catch((error) => {
-        captureError({
-          eventName: CYCLE_TRACKER_EVENTS.unfavorite,
-          payload: {
-            id: cycleId,
-          },
-          error,
-        });
-      });
+    const removeFromFavoritePromise = removeCycleFromFavorites(
+      workspaceSlug?.toString(),
+      projectId.toString(),
+      cycleId
+    );
 
     setPromiseToast(removeFromFavoritePromise, {
       loading: t("project_cycles.action.unfavorite.loading"),
@@ -209,9 +181,9 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
       />
       <button
         onClick={openCycleOverview}
-        className={`z-[1] flex text-accent-secondary text-11 gap-1 flex-shrink-0 ${isMobile || (isActive && !searchParams.has("peekCycle")) ? "flex" : "hidden group-hover:flex"}`}
+        className={`z-[1] flex flex-shrink-0 gap-1 text-11 text-accent-secondary ${isMobile || (isActive && !searchParams.has("peekCycle")) ? "flex" : "hidden group-hover:flex"}`}
       >
-        <Eye className="h-4 w-4 my-auto  text-accent-secondary" />
+        <Eye className="my-auto h-4 w-4 text-accent-secondary" />
         <span>{t("project_cycles.more_details")}</span>
       </button>
       {showIssueCount && (
@@ -223,12 +195,12 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
       <CycleAdditionalActions cycleId={cycleId} projectId={projectId} />
       {showTransferIssues && (
         <div
-          className="px-2 h-6  text-accent-secondary flex items-center gap-1 cursor-pointer"
+          className="flex h-6 cursor-pointer items-center gap-1 px-2 text-accent-secondary"
           onClick={() => {
             setTransferIssuesModal(true);
           }}
         >
-          <TransferIcon className="fill-accent-primary w-4" />
+          <TransferIcon className="w-4 fill-accent-primary" />
           <span>{t("project_cycles.transfer_work_items", { count: transferableIssuesCount })}</span>
         </div>
       )}
@@ -240,20 +212,20 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
               tooltipContent={
                 <span className="flex gap-1">
                   {renderFormattedDateInUserTimezone(cycleDetails.start_date ?? "")}
-                  <ArrowRight className="h-3 w-3 flex-shrink-0 my-auto" />
+                  <ArrowRight className="my-auto h-3 w-3 flex-shrink-0" />
                   {renderFormattedDateInUserTimezone(cycleDetails.end_date ?? "")}
                 </span>
               }
               disabled={!isProjectTimeZoneDifferent()}
               tooltipHeading={t("project_cycles.in_your_timezone")}
             >
-              <div className="flex gap-1 text-11 text-tertiary font-medium items-center">
-                <CalendarDays className="h-3 w-3 flex-shrink-0 my-auto" />
+              <div className="flex items-center gap-1 text-11 font-medium text-tertiary">
+                <CalendarDays className="my-auto h-3 w-3 flex-shrink-0" />
                 <MergedDateDisplay startDate={cycleDetails.start_date} endDate={cycleDetails.end_date} />
               </div>
             </Tooltip>
             {projectUTCOffset && (
-              <span className="rounded-md text-11 px-2 cursor-default  py-1 bg-layer-1 text-tertiary">
+              <span className="cursor-default rounded-md bg-layer-1 px-2 py-1 text-11 text-tertiary">
                 {projectUTCOffset}
               </span>
             )}
@@ -282,7 +254,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
               customTooltipContent={
                 <span className="flex gap-1">
                   {renderFormattedDateInUserTimezone(cycleDetails.start_date ?? "")}
-                  <ArrowRight className="h-3 w-3 flex-shrink-0 my-auto" />
+                  <ArrowRight className="my-auto h-3 w-3 flex-shrink-0" />
                   {renderFormattedDateInUserTimezone(cycleDetails.end_date ?? "")}
                 </span>
               }
@@ -319,7 +291,6 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
       )}
       {isEditingAllowed && !cycleDetails.archived_at && (
         <FavoriteStar
-          data-ph-element={CYCLE_TRACKER_ELEMENTS.LIST_ITEM}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

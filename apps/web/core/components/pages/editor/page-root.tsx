@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
@@ -8,8 +14,8 @@ import { usePageFallback } from "@/hooks/use-page-fallback";
 // plane web import
 import type { PageUpdateHandler, TCustomEventHandlers } from "@/hooks/use-realtime-page-events";
 import { PageModals } from "@/plane-web/components/pages";
-import { usePagesPaneExtensions, useExtendedEditorProps } from "@/plane-web/hooks/pages";
-import type { EPageStoreType } from "@/plane-web/hooks/store";
+import { usePagesPaneExtensions, useExtendedEditorProps } from "@/hooks/pages";
+import type { EPageStoreType } from "@/hooks/store";
 // store
 import type { TPageInstance } from "@/store/pages/base-page";
 // local imports
@@ -85,9 +91,8 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
   );
 
   useEffect(() => {
-    setTimeout(() => {
-      setEditorRef(editorRef.current);
-    }, 0);
+    const timer = setTimeout(() => setEditorRef(editorRef.current), 0);
+    return () => clearTimeout(timer);
   }, [isContentEditable, setEditorRef]);
 
   // Get extensions and navigation logic from hook
@@ -148,8 +153,8 @@ export const PageRoot = observer(function PageRoot(props: TPageRootProps) {
   );
 
   return (
-    <div className="relative size-full overflow-hidden flex transition-all duration-300 ease-in-out">
-      <div className="size-full flex flex-col overflow-hidden">
+    <div className="relative flex size-full overflow-hidden transition-all duration-300 ease-in-out">
+      <div className="flex size-full flex-col overflow-hidden">
         <PageVersionsOverlay
           editorComponent={PagesVersionEditor}
           fetchVersionDetails={handlers.fetchVersionDetails}

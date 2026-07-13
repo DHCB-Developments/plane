@@ -1,24 +1,27 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { FormProvider, useForm } from "react-hook-form";
-import { PROJECT_TRACKER_EVENTS, RANDOM_EMOJI_CODES } from "@plane/constants";
+// plane imports
 import { useTranslation } from "@plane/i18n";
-// ui
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { EFileAssetType } from "@plane/types";
-import type { IProject } from "@plane/types";
-// constants
+// components
 import ProjectCommonAttributes from "@/components/project/create/common-attributes";
 import ProjectCreateHeader from "@/components/project/create/header";
 import ProjectCreateButtons from "@/components/project/create/project-create-buttons";
 // hooks
-import { DEFAULT_COVER_IMAGE_URL, getCoverImageType, uploadCoverImage } from "@/helpers/cover-image.helper";
-import { captureError, captureSuccess } from "@/helpers/event-tracker.helper";
+import { getCoverImageType, uploadCoverImage } from "@/helpers/cover-image.helper";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web types
-import type { TProject } from "@/plane-web/types/projects";
-import ProjectAttributes from "./attributes";
+import type { TProject } from "@plane/types";
+import { ProjectAttributes } from "./attributes";
 import { getProjectFormValues } from "./utils";
 
 export type TCreateProjectFormProps = {
@@ -37,7 +40,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
   const { t } = useTranslation();
   const { addProjectToFavorites, createProject, updateProject } = useProject();
   // states
-  const [isChangeInIdentifierRequired, setIsChangeInIdentifierRequired] = useState(true);
+  const [shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier] = useState(true);
   // form info
   const methods = useForm<TProject>({
     defaultValues: { ...getProjectFormValues(), ...data },
@@ -98,12 +101,6 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
           await updateCoverImageStatus(res.id, coverImage);
           await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: coverImage });
         }
-        captureSuccess({
-          eventName: PROJECT_TRACKER_EVENTS.create,
-          payload: {
-            identifier: formData.identifier,
-          },
-        });
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("success"),
@@ -113,24 +110,18 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
         if (setToFavorite) {
           handleAddToFavorites(res.id);
         }
-        handleNextStep(res.id);
+        return handleNextStep(res.id);
       })
       .catch((err) => {
         try {
-          captureError({
-            eventName: PROJECT_TRACKER_EVENTS.create,
-            payload: {
-              identifier: formData.identifier,
-            },
-          });
-
           // Handle the new error format where codes are nested in arrays under field names
           const errorData = err?.data ?? {};
 
           const nameError = errorData.name?.includes("PROJECT_NAME_ALREADY_EXIST");
           const identifierError = errorData?.identifier?.includes("PROJECT_IDENTIFIER_ALREADY_EXIST");
+          const nameSpecialCharError = errorData?.name?.includes("PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS");
 
-          if (nameError || identifierError) {
+          if (nameError || identifierError || nameSpecialCharError) {
             if (nameError) {
               setToast({
                 type: TOAST_TYPE.ERROR,
@@ -144,6 +135,14 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
                 type: TOAST_TYPE.ERROR,
                 title: t("toast.error"),
                 message: t("project_identifier_already_taken"),
+              });
+            }
+
+            if (nameSpecialCharError) {
+              setToast({
+                type: TOAST_TYPE.ERROR,
+                title: t("toast.error"),
+                message: t("project_name_cannot_contain_special_characters"),
               });
             }
           } else {
@@ -167,7 +166,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
 
   const handleClose = () => {
     onClose();
-    setIsChangeInIdentifierRequired(true);
+    setShouldAutoSyncIdentifier(true);
     setTimeout(() => {
       reset();
     }, 300);
@@ -182,8 +181,8 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
           <ProjectCommonAttributes
             setValue={setValue}
             isMobile={isMobile}
-            isChangeInIdentifierRequired={isChangeInIdentifierRequired}
-            setIsChangeInIdentifierRequired={setIsChangeInIdentifierRequired}
+            shouldAutoSyncIdentifier={shouldAutoSyncIdentifier}
+            setShouldAutoSyncIdentifier={setShouldAutoSyncIdentifier}
           />
           <ProjectAttributes isMobile={isMobile} />
         </div>

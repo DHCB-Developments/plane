@@ -1,12 +1,27 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { CircleCheck, CircleX, Clock, ExternalLink, FileStack, Link, Trash2, MoveRight, Copy } from "lucide-react";
+import { Clock, FileStack, MoreHorizontal, MoveRight } from "lucide-react";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
-import { ChevronDownIcon, ChevronUpIcon } from "@plane/propel/icons";
+import { IconButton, getIconButtonStyling } from "@plane/propel/icon-button";
+import {
+  LinkIcon,
+  CopyIcon,
+  NewTabIcon,
+  TrashIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CheckCircleFilledIcon,
+  CloseCircleFilledIcon,
+} from "@plane/propel/icons";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TNameDescriptionLoader } from "@plane/types";
 import { EInboxIssueStatus } from "@plane/types";
@@ -62,7 +77,8 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
   const { currentTab, deleteInboxIssue, filteredInboxIssueIds } = useProjectInbox();
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails } = useProject();
+  const { getPartialProjectById } = useProject();
+  const currentProjectDetails = getPartialProjectById(projectId);
   const { t } = useTranslation();
 
   const router = useAppRouter();
@@ -270,7 +286,7 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
         />
       </>
 
-      <Row className="hidden relative lg:flex h-full w-full items-center justify-between gap-2 bg-surface-1 z-[15] border-b border-subtle">
+      <Row className="relative z-15 hidden h-full w-full items-center justify-between gap-2 border-b border-subtle bg-surface-1 lg:flex">
         <div className="flex items-center gap-4">
           {isNotificationEmbed && (
             <button onClick={embedRemoveCurrentNotification}>
@@ -278,12 +294,12 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
             </button>
           )}
           {issue?.project_id && issue.sequence_id && (
-            <h3 className="text-14 font-medium text-tertiary flex-shrink-0">
+            <h3 className="flex-shrink-0 text-14 font-medium text-tertiary">
               {getProjectById(issue.project_id)?.identifier}-{issue.sequence_id}
             </h3>
           )}
           <InboxIssueStatus inboxIssue={inboxIssue} iconSize={12} />
-          <div className="flex items-center justify-end w-full">
+          <div className="flex w-full items-center justify-end">
             <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
           </div>
         </div>
@@ -291,73 +307,70 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
         <div className="flex items-center gap-2">
           {!isNotificationEmbed && (
             <div className="flex items-center gap-x-2">
-              <button
-                type="button"
-                className="rounded-sm border border-subtle p-1.5"
+              <IconButton
+                variant="secondary"
+                size="lg"
+                icon={ChevronUpIcon}
+                aria-label="Previous work item"
                 onClick={() => handleInboxIssueNavigation("prev")}
-              >
-                <ChevronUpIcon height={14} width={14} strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                className="rounded-sm border border-subtle p-1.5"
+              />
+              <IconButton
+                variant="secondary"
+                size="lg"
+                icon={ChevronDownIcon}
+                aria-label="Next work item"
                 onClick={() => handleInboxIssueNavigation("next")}
-              >
-                <ChevronDownIcon height={14} width={14} strokeWidth={2} />
-              </button>
+              />
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
             {canMarkAsAccepted && (
-              <div className="flex-shrink-0">
-                <Button
-                  variant="secondary"
-                  prependIcon={<CircleCheck className="w-3 h-3" />}
-                  className="text-green-500 border border-green-500 bg-green-500/20 focus:bg-green-500/20 focus:text-green-500 hover:bg-green-500/40 bg-opacity-20"
-                  onClick={() =>
-                    handleActionWithPermission(
-                      isProjectAdmin,
-                      () => setAcceptIssueModal(true),
-                      t("inbox_issue.errors.accept_permission")
-                    )
-                  }
-                >
-                  {t("inbox_issue.actions.accept")}
-                </Button>
-              </div>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() =>
+                  handleActionWithPermission(
+                    isProjectAdmin,
+                    () => setAcceptIssueModal(true),
+                    t("inbox_issue.errors.accept_permission")
+                  )
+                }
+              >
+                <CheckCircleFilledIcon className="size-4 shrink-0 text-success-secondary" />
+                {t("inbox_issue.actions.accept")}
+              </Button>
             )}
 
             {canMarkAsDeclined && (
-              <div className="flex-shrink-0">
-                <Button
-                  variant="secondary"
-                  prependIcon={<CircleX className="w-3 h-3" />}
-                  className="text-red-500 border border-red-500 bg-red-500/20 focus:bg-red-500/20 focus:text-red-500 hover:bg-red-500/40 bg-opacity-20"
-                  onClick={() =>
-                    handleActionWithPermission(
-                      isProjectAdmin,
-                      () => setDeclineIssueModal(true),
-                      t("inbox_issue.errors.decline_permission")
-                    )
-                  }
-                >
-                  {t("inbox_issue.actions.decline")}
-                </Button>
-              </div>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() =>
+                  handleActionWithPermission(
+                    isProjectAdmin,
+                    () => setDeclineIssueModal(true),
+                    t("inbox_issue.errors.decline_permission")
+                  )
+                }
+              >
+                <CloseCircleFilledIcon className="size-4 shrink-0 text-danger-secondary" />
+                {t("inbox_issue.actions.decline")}
+              </Button>
             )}
 
             {isAcceptedOrDeclined ? (
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
-                  prependIcon={<Link className="h-2.5 w-2.5" />}
+                  size="lg"
+                  prependIcon={<LinkIcon className="h-2.5 w-2.5" />}
                   onClick={() => handleCopyIssueLink(workItemLink)}
                 >
                   {t("inbox_issue.actions.copy")}
                 </Button>
                 <ControlLink href={workItemLink} onClick={() => router.push(workItemLink)} target="_self">
-                  <Button variant="secondary" prependIcon={<ExternalLink className="h-2.5 w-2.5" />}>
+                  <Button variant="secondary" size="lg" prependIcon={<NewTabIcon className="h-2.5 w-2.5" />}>
                     {t("inbox_issue.actions.open")}
                   </Button>
                 </ControlLink>
@@ -365,7 +378,11 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
             ) : (
               <>
                 {isAllowed && (
-                  <CustomMenu verticalEllipsis placement="bottom-start">
+                  <CustomMenu
+                    customButton={<MoreHorizontal className="size-4" />}
+                    customButtonClassName={getIconButtonStyling("secondary", "lg")}
+                    placement="bottom-start"
+                  >
                     {canMarkAsAccepted && (
                       <CustomMenu.MenuItem
                         onClick={() =>
@@ -402,14 +419,14 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
                     )}
                     <CustomMenu.MenuItem onClick={() => handleCopyIssueLink(workItemLink)}>
                       <div className="flex items-center gap-2">
-                        <Copy size={14} strokeWidth={2} />
+                        <CopyIcon width={14} height={14} strokeWidth={2} />
                         {t("inbox_issue.actions.copy")}
                       </div>
                     </CustomMenu.MenuItem>
                     {canDelete && (
                       <CustomMenu.MenuItem onClick={() => setDeleteIssueModal(true)}>
                         <div className="flex items-center gap-2">
-                          <Trash2 size={14} strokeWidth={2} />
+                          <TrashIcon width={14} height={14} strokeWidth={2} />
                           {t("inbox_issue.actions.delete")}
                         </div>
                       </CustomMenu.MenuItem>

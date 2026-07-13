@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
@@ -102,7 +108,7 @@ const CreatedVsResolved = observer(function CreatedVsResolved() {
           }}
           yAxis={{
             key: "count",
-            label: t("common.no_of", { entity: isEpic ? t("epics") : t("work_items") }),
+            label: t("common.no_of", { entity: isEpic ? t("common.epics") : t("work_items") }),
             offset: -60,
             dx: -24,
           }}

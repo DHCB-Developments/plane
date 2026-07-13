@@ -1,4 +1,9 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 // plane types
@@ -110,7 +115,7 @@ export function CreateUpdateModuleLinkModal(props: Props) {
             <div>
               <label htmlFor="title" className="mb-2 text-secondary">
                 Display title
-                <span className="text-10 block">Optional</span>
+                <span className="block text-10">Optional</span>
               </label>
               <Controller
                 control={control}
@@ -131,7 +136,7 @@ export function CreateUpdateModuleLinkModal(props: Props) {
             </div>
           </div>
         </div>
-        <div className="px-5 py-4 flex items-center justify-end gap-2 border-t-[0.5px] border-subtle">
+        <div className="flex items-center justify-end gap-2 border-t-[0.5px] border-subtle px-5 py-4">
           <Button variant="secondary" size="lg" onClick={onClose}>
             Cancel
           </Button>

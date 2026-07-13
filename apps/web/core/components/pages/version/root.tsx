@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -7,7 +13,7 @@ import { cn } from "@plane/utils";
 // hooks
 import { useQueryParams } from "@/hooks/use-query-params";
 // plane web imports
-import type { EPageStoreType } from "@/plane-web/hooks/store";
+import type { EPageStoreType } from "@/hooks/store";
 // local imports
 import { PAGE_NAVIGATION_PANE_VERSION_QUERY_PARAM, PAGE_NAVIGATION_PANE_WIDTH } from "../navigation-pane";
 import type { TVersionEditorProps } from "./editor";
@@ -43,9 +49,9 @@ export const PageVersionsOverlay = observer(function PageVersionsOverlay(props: 
   return (
     <div
       className={cn(
-        "absolute inset-0 z-[16] h-full bg-surface-1 flex overflow-hidden opacity-0 pointer-events-none transition-opacity",
+        "pointer-events-none absolute inset-0 z-[16] flex h-full overflow-hidden bg-surface-1 opacity-0 transition-opacity",
         {
-          "opacity-100 pointer-events-auto": isOpen,
+          "pointer-events-auto opacity-100": isOpen,
         }
       )}
       style={{

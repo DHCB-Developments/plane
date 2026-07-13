@@ -1,24 +1,11 @@
-if (typeof window !== "undefined" && window) {
-  // Add request callback polyfill to browser in case it does not exist
-  window.requestIdleCallback =
-    window.requestIdleCallback ??
-    function (cb) {
-      const start = Date.now();
-      return setTimeout(function () {
-        cb({
-          didTimeout: false,
-          timeRemaining: function () {
-            return Math.max(0, 50 - (Date.now() - start));
-          },
-        });
-      }, 1);
-    };
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-  window.cancelIdleCallback =
-    window.cancelIdleCallback ??
-    function (id) {
-      clearTimeout(id);
-    };
-}
+import { installIdleCallbackPolyfill } from "@/lib/idle-task";
 
-export {};
+installIdleCallbackPolyfill();
+
+export default true;

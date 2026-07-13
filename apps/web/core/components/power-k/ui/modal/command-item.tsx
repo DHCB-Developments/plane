@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React from "react";
 import { Command } from "cmdk";
-import { Check } from "lucide-react";
+
+import { CheckIcon } from "@plane/propel/icons";
 // plane imports
 import { cn } from "@plane/utils";
 // local imports
@@ -28,12 +35,12 @@ export function PowerKModalCommandItem(props: Props) {
           "opacity-70": isDisabled,
         })}
       >
-        {Icon && <Icon className="shrink-0 size-3.5" />}
+        {Icon && <Icon className="size-3.5 shrink-0" />}
         {iconNode}
         {label}
       </div>
-      <div className="shrink-0 flex items-center gap-2">
-        {isSelected && <Check className="shrink-0 size-3 text-secondary" />}
+      <div className="flex shrink-0 items-center gap-2">
+        {isSelected && <CheckIcon className="size-3 shrink-0 text-secondary" />}
         {keySequence && <KeySequenceBadge sequence={keySequence} />}
         {shortcut && <ShortcutBadge shortcut={shortcut} />}
       </div>

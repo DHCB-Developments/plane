@@ -1,13 +1,20 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { FormEvent } from "react";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Globe2, Lock } from "lucide-react";
+
 // plane imports
 import { ETabIndices, EPageAccess } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@plane/propel/emoji-icon-picker";
-import { PageIcon } from "@plane/propel/icons";
+import { GlobeIcon, LockIcon, PageIcon } from "@plane/propel/icons";
+import type { ISvgIcons } from "@plane/propel/icons";
 import type { TPage } from "@plane/types";
 import { Input } from "@plane/ui";
 import { getTabIndex } from "@plane/utils";
@@ -26,10 +33,10 @@ type Props = {
 const PAGE_ACCESS_SPECIFIERS: {
   key: EPageAccess;
   i18n_label: string;
-  icon: LucideIcon;
+  icon: LucideIcon | React.FC<ISvgIcons>;
 }[] = [
-  { key: EPageAccess.PUBLIC, i18n_label: "common.access.public", icon: Globe2 },
-  { key: EPageAccess.PRIVATE, i18n_label: "common.access.private", icon: Lock },
+  { key: EPageAccess.PUBLIC, i18n_label: "common.access.public", icon: GlobeIcon },
+  { key: EPageAccess.PRIVATE, i18n_label: "common.access.private", icon: LockIcon },
 ];
 
 export function PageForm(props: Props) {
@@ -62,11 +69,11 @@ export function PageForm(props: Props) {
     <form onSubmit={handlePageFormSubmit}>
       <div className="space-y-5 p-5">
         <h3 className="text-18 font-medium text-secondary">Create page</h3>
-        <div className="flex items-start gap-2 h-9 w-full">
+        <div className="flex h-9 w-full items-start gap-2">
           <EmojiPicker
             isOpen={isOpen}
             handleToggle={(val: boolean) => setIsOpen(val)}
-            className="flex items-center justify-center flex-shrink0"
+            className="flex-shrink0 flex items-center justify-center"
             buttonClassName="flex items-center justify-center bg-layer-2 hover:bg-layer-2-hover rounded-md"
             label={
               <span className="grid h-9 w-9 place-items-center rounded-md">
@@ -106,7 +113,7 @@ export function PageForm(props: Props) {
                 : EmojiIconPickerTypes.ICON
             }
           />
-          <div className="space-y-1 flew-grow w-full">
+          <div className="flew-grow w-full space-y-1">
             <Input
               id="name"
               type="text"
@@ -119,12 +126,14 @@ export function PageForm(props: Props) {
               autoFocus
             />
             {isTitleLengthMoreThan255Character && (
-              <span className="text-11 text-red-500">Max length of the name should be less than 255 characters</span>
+              <span className="text-11 text-danger-primary">
+                Max length of the name should be less than 255 characters
+              </span>
             )}
           </div>
         </div>
       </div>
-      <div className="px-5 py-4 flex items-center justify-between gap-2 border-t-[0.5px] border-subtle">
+      <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle px-5 py-4">
         <div className="flex items-center gap-2">
           <AccessField
             onChange={(access) => handleFormData("access", access)}

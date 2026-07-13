@@ -1,4 +1,9 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 // ui
 import { Button } from "@plane/propel/button";
@@ -38,11 +43,11 @@ export function SingleExport({ service, refreshing }: Props) {
           <span
             className={`rounded-sm px-2 py-0.5 text-11 capitalize ${
               service.status === "completed"
-                ? "bg-green-500/20 text-green-500"
+                ? "bg-success-subtle text-success-primary"
                 : service.status === "processing"
                   ? "bg-yellow-500/20 text-yellow-500"
                   : service.status === "failed"
-                    ? "bg-red-500/20 text-red-500"
+                    ? "bg-danger-subtle text-danger-primary"
                     : service.status === "expired"
                       ? "bg-orange-500/20 text-orange-500"
                       : ""
@@ -69,7 +74,7 @@ export function SingleExport({ service, refreshing }: Props) {
           )}
         </>
       ) : (
-        <div className="text-11 text-red-500">Expired</div>
+        <div className="text-11 text-danger-primary">Expired</div>
       )}
     </div>
   );

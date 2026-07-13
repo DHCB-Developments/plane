@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 // services
 import { API_BASE_URL } from "@plane/constants";
 import type {
@@ -133,14 +139,6 @@ export class UserService extends APIService {
 
   async updateCurrentUserEmailNotificationSettings(data: Partial<IUserEmailNotificationSettings>): Promise<any> {
     return this.patch("/api/users/me/notification-preferences/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getUserActivity(params: { per_page: number; cursor?: string }): Promise<IUserActivityResponse> {
-    return this.get("/api/users/me/activities/", { params })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

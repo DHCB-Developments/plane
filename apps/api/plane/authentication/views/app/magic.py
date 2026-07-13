@@ -1,3 +1,7 @@
+# Copyright (c) 2023-present Plane Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
 # Django imports
 from django.core.validators import validate_email
 from django.http import HttpResponseRedirect
@@ -22,7 +26,10 @@ from plane.authentication.adapter.error import (
     AuthenticationException,
     AUTHENTICATION_ERROR_CODES,
 )
-from plane.authentication.rate_limit import AuthenticationThrottle
+from plane.authentication.rate_limit import (
+    AuthenticationThrottle,
+    authentication_throttle_allows,
+)
 from plane.utils.path_validator import get_safe_redirect_url
 
 
@@ -60,6 +67,18 @@ class MagicSignInEndpoint(View):
         code = request.POST.get("code", "").strip()
         email = request.POST.get("email", "").strip().lower()
         next_path = request.POST.get("next_path")
+
+        if not authentication_throttle_allows(request):
+            exc = AuthenticationException(
+                error_code=AUTHENTICATION_ERROR_CODES["RATE_LIMIT_EXCEEDED"],
+                error_message="RATE_LIMIT_EXCEEDED",
+            )
+            url = get_safe_redirect_url(
+                base_url=base_host(request=request, is_app=True),
+                next_path=next_path,
+                params=exc.get_error_dict(),
+            )
+            return HttpResponseRedirect(url)
 
         if code == "" or email == "":
             exc = AuthenticationException(
@@ -131,6 +150,18 @@ class MagicSignUpEndpoint(View):
         code = request.POST.get("code", "").strip()
         email = request.POST.get("email", "").strip().lower()
         next_path = request.POST.get("next_path")
+
+        if not authentication_throttle_allows(request):
+            exc = AuthenticationException(
+                error_code=AUTHENTICATION_ERROR_CODES["RATE_LIMIT_EXCEEDED"],
+                error_message="RATE_LIMIT_EXCEEDED",
+            )
+            url = get_safe_redirect_url(
+                base_url=base_host(request=request, is_app=True),
+                next_path=next_path,
+                params=exc.get_error_dict(),
+            )
+            return HttpResponseRedirect(url)
 
         if code == "" or email == "":
             exc = AuthenticationException(

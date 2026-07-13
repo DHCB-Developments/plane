@@ -1,10 +1,16 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { GripVertical } from "lucide-react";
 // plane imports
 import { EEstimateSystem, estimateCount } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
+import { EditIcon, TrashIcon } from "@plane/propel/icons";
 import type { TEstimatePointsObject, TEstimateSystemKeys, TEstimateTypeErrorObject } from "@plane/types";
 import { convertMinutesToHoursMinutesString } from "@plane/utils";
 // plane web imports
@@ -56,11 +62,11 @@ export const EstimatePointItemPreview = observer(function EstimatePointItemPrevi
   return (
     <div>
       {!estimatePointEditToggle && !estimatePointDeleteToggle && (
-        <div className="border border-subtle rounded-sm relative flex items-center px-1 gap-2 text-14 my-1">
-          <div className="rounded-xs w-6 h-6 flex-shrink-0 relative flex justify-center items-center hover:bg-layer-1 transition-colors cursor-pointer">
+        <div className="relative my-1 flex items-center gap-2 rounded-sm border border-subtle px-1 text-14">
+          <div className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-xs transition-colors hover:bg-layer-1">
             <GripVertical size={14} className="text-secondary" />
           </div>
-          <div ref={EstimatePointValueRef} className="py-2 w-full text-13">
+          <div ref={EstimatePointValueRef} className="w-full py-2 text-13">
             {estimatePoint?.value ? (
               `${estimateType === EEstimateSystem.TIME ? convertMinutesToHoursMinutesString(Number(estimatePoint?.value)) : estimatePoint?.value}`
             ) : (
@@ -68,21 +74,21 @@ export const EstimatePointItemPreview = observer(function EstimatePointItemPrevi
             )}
           </div>
           <div
-            className="rounded-xs w-6 h-6 flex-shrink-0 relative flex justify-center items-center hover:bg-layer-1 transition-colors cursor-pointer"
+            className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-xs transition-colors hover:bg-layer-1"
             onClick={() => setEstimatePointEditToggle(true)}
           >
-            <Pencil size={14} className="text-secondary" />
+            <EditIcon width={14} height={14} className="text-secondary" />
           </div>
           {estimatePoints.length > estimateCount.min && (
             <div
-              className="rounded-xs w-6 h-6 flex-shrink-0 relative flex justify-center items-center hover:bg-layer-1 transition-colors cursor-pointer"
+              className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-xs transition-colors hover:bg-layer-1"
               onClick={() =>
                 estimateId && estimatePointId
                   ? setEstimatePointDeleteToggle(true)
                   : handleEstimatePointValueRemove && handleEstimatePointValueRemove()
               }
             >
-              <Trash2 size={14} className="text-secondary" />
+              <TrashIcon width={14} height={14} className="text-secondary" />
             </div>
           )}
         </div>

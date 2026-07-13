@@ -1,13 +1,16 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { Dispatch, SetStateAction } from "react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { Pencil } from "lucide-react";
-import { PROJECT_SETTINGS_TRACKER_ELEMENTS } from "@plane/constants";
-import { CloseIcon } from "@plane/propel/icons";
+import { EditIcon, CloseIcon } from "@plane/propel/icons";
 // types
 import type { IIssueLabel } from "@plane/types";
 // hooks
-import { captureClick } from "@/helpers/event-tracker.helper";
 import { useLabel } from "@/hooks/store/use-label";
 // components
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
@@ -69,13 +72,10 @@ export function ProjectSettingLabelItem(props: Props) {
       key: "remove_from_group",
     },
     {
-      CustomIcon: Pencil,
+      CustomIcon: EditIcon,
       onClick: () => {
         setEditLabelForm(true);
         setIsUpdating(true);
-        captureClick({
-          elementName: PROJECT_SETTINGS_TRACKER_ELEMENTS.LABELS_CONTEXT_MENU,
-        });
       },
       isVisible: true,
       text: "Edit label",
@@ -90,7 +90,7 @@ export function ProjectSettingLabelItem(props: Props) {
           className={`rounded-sm ${isDroppingInLabel ? "border-[2px] border-accent-strong" : "border-[1.5px] border-transparent"}`}
         >
           <div
-            className={`py-3 px-1 group relative flex items-center justify-between gap-2 space-y-3 rounded-sm  ${
+            className={`group relative flex items-center justify-between gap-2 space-y-3 rounded-sm px-1 py-3 ${
               isDroppingInLabel ? "" : "border-[0.5px] border-subtle"
             } ${isDragging || isParentDragging ? "bg-layer-1" : "bg-surface-1"}`}
           >

@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React, { useState } from "react";
 import { xor } from "lodash-es";
 import { observer } from "mobx-react";
@@ -64,7 +70,7 @@ export const IssueModuleSelect = observer(function IssueModuleSelect(props: TIss
         placeholder={t("module.no_module")}
         disabled={disableSelect}
         className="group h-full w-full"
-        buttonContainerClassName="w-full text-left h-7.5 rounded-sm"
+        buttonContainerClassName="w-full text-left rounded-sm"
         buttonClassName={`text-body-xs-medium justify-between ${issue?.module_ids?.length ? "" : "text-placeholder"}`}
         buttonVariant="transparent-with-text"
         hideIcon

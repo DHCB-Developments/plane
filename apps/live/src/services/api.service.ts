@@ -1,5 +1,11 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { AxiosInstance } from "axios";
-import axios from "axios";
+import { create } from "axios";
 import { env } from "@/env";
 import { AppError } from "@/lib/errors";
 
@@ -10,7 +16,7 @@ export abstract class APIService {
 
   constructor(baseURL?: string) {
     this.baseURL = baseURL || env.API_BASE_URL;
-    this.axiosInstance = axios.create({
+    this.axiosInstance = create({
       baseURL: this.baseURL,
       withCredentials: true,
       timeout: 20000,

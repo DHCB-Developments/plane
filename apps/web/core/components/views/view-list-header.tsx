@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React, { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // icons
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import { useOutsideClickDetector } from "@plane/hooks";
-import { CloseIcon } from "@plane/propel/icons";
+import { SearchIcon, CloseIcon } from "@plane/propel/icons";
 // plane helpers
 // helpers
 import { cn } from "@plane/utils";
@@ -48,7 +54,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
   }, [filters?.searchQuery]);
 
   return (
-    <div className="h-full flex items-center gap-2">
+    <div className="flex h-full items-center gap-2">
       <div className="flex items-center">
         {!isSearchOpen && (
           <IconButton
@@ -59,18 +65,18 @@ export const ViewListHeader = observer(function ViewListHeader() {
               setIsSearchOpen(true);
               inputRef.current?.focus();
             }}
-            icon={Search}
+            icon={SearchIcon}
           />
         )}
         <div
           className={cn(
-            "ml-auto flex items-center justify-start gap-1 rounded-md border border-transparent bg-surface-1 text-placeholder w-0 transition-[width] ease-linear overflow-hidden opacity-0",
+            "ml-auto flex w-0 items-center justify-start gap-1 overflow-hidden rounded-md border border-transparent bg-surface-1 text-placeholder opacity-0 transition-[width] ease-linear",
             {
-              "w-64 px-2.5 py-1.5 border-subtle opacity-100": isSearchOpen,
+              "w-64 border-subtle px-2.5 py-1.5 opacity-100": isSearchOpen,
             }
           )}
         >
-          <Search className="h-3.5 w-3.5" />
+          <SearchIcon className="h-3.5 w-3.5" />
           <input
             ref={inputRef}
             className="w-full max-w-[234px] border-none bg-transparent text-13 text-primary placeholder:text-placeholder focus:outline-none"
@@ -93,7 +99,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
           )}
         </div>
       </div>
-      <div className="hidden md:flex items-center gap-2">
+      <div className="hidden items-center gap-2 md:flex">
         <ViewOrderByDropdown
           sortBy={filters.sortBy}
           sortKey={filters.sortKey}

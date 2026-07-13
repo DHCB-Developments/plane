@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React, { forwardRef, useEffect } from "react";
 import { observer } from "mobx-react";
 import { TwitterPicker } from "react-color";
@@ -5,13 +11,12 @@ import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // plane imports
-import { getRandomLabelColor, LABEL_COLOR_OPTIONS, PROJECT_SETTINGS_TRACKER_EVENTS } from "@plane/constants";
+import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IIssueLabel } from "@plane/types";
 import { Input } from "@plane/ui";
-import { captureError, captureSuccess } from "@/helpers/event-tracker.helper";
 
 // error codes
 const errorCodes = {
@@ -86,26 +91,11 @@ export const CreateUpdateLabelInline = observer(
 
       await labelOperationsCallbacks
         .createLabel(formData)
-        .then((res) => {
-          captureSuccess({
-            eventName: PROJECT_SETTINGS_TRACKER_EVENTS.label_created,
-            payload: {
-              name: res.name,
-              id: res.id,
-            },
-          });
+        .then((_res) => {
           handleClose();
           reset(defaultValues);
         })
         .catch((error) => {
-          captureError({
-            eventName: PROJECT_SETTINGS_TRACKER_EVENTS.label_created,
-            payload: {
-              name: formData.name,
-            },
-            error,
-          });
-
           const errorMessage = getErrorMessage(error, "create");
           setToast({
             title: "Error!",
@@ -121,26 +111,11 @@ export const CreateUpdateLabelInline = observer(
 
       await labelOperationsCallbacks
         .updateLabel(labelToUpdate.id, formData)
-        .then((res) => {
-          captureSuccess({
-            eventName: PROJECT_SETTINGS_TRACKER_EVENTS.label_updated,
-            payload: {
-              name: res.name,
-              id: res.id,
-            },
-          });
+        .then((_res) => {
           reset(defaultValues);
           handleClose();
         })
         .catch((error) => {
-          captureError({
-            eventName: PROJECT_SETTINGS_TRACKER_EVENTS.label_updated,
-            payload: {
-              name: formData.name,
-              id: labelToUpdate.id,
-            },
-            error,
-          });
           const errorMessage = getErrorMessage(error, "update");
           setToast({
             title: "Oops!",
@@ -214,7 +189,7 @@ export const CreateUpdateLabelInline = observer(
                     leaveFrom="opacity-100 translate-y-0"
                     leaveTo="opacity-0 translate-y-1"
                   >
-                    <Popover.Panel className="absolute left-0 top-full z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
+                    <Popover.Panel className="absolute top-full left-0 z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
                       <Controller
                         name="color"
                         control={control}
@@ -273,7 +248,7 @@ export const CreateUpdateLabelInline = observer(
             {isUpdating ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
           </Button>
         </div>
-        {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-red-500">{errors.name?.message}</p>}
+        {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
       </>
     );
   })

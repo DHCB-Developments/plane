@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import Link from "next/link";
@@ -8,11 +14,12 @@ import { API_BASE_URL } from "@plane/constants";
 import { Button, getButtonStyling } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IFormattedInstanceConfiguration, TInstanceGoogleAuthenticationConfigurationKeys } from "@plane/types";
-import { cn } from "@plane/utils";
 // components
 import { CodeBlock } from "@/components/common/code-block";
 import { ConfirmDiscardModal } from "@/components/common/confirm-discard-modal";
 import type { TControllerInputFormField } from "@/components/common/controller-input";
+import type { TControllerSwitchFormField } from "@/components/common/controller-switch";
+import { ControllerSwitch } from "@/components/common/controller-switch";
 import { ControllerInput } from "@/components/common/controller-input";
 import type { TCopyField } from "@/components/common/copy-field";
 import { CopyField } from "@/components/common/copy-field";
@@ -41,6 +48,7 @@ export function InstanceGoogleConfigForm(props: Props) {
     defaultValues: {
       GOOGLE_CLIENT_ID: config["GOOGLE_CLIENT_ID"],
       GOOGLE_CLIENT_SECRET: config["GOOGLE_CLIENT_SECRET"],
+      ENABLE_GOOGLE_SYNC: config["ENABLE_GOOGLE_SYNC"] || "0",
     },
   });
 
@@ -93,6 +101,11 @@ export function InstanceGoogleConfigForm(props: Props) {
     },
   ];
 
+  const GOOGLE_FORM_SWITCH_FIELD: TControllerSwitchFormField<GoogleConfigFormValues> = {
+    name: "ENABLE_GOOGLE_SYNC",
+    label: "Google",
+  };
+
   const GOOGLE_COMMON_SERVICE_DETAILS: TCopyField[] = [
     {
       key: "Origin_URL",
@@ -140,19 +153,21 @@ export function InstanceGoogleConfigForm(props: Props) {
   const onSubmit = async (formData: GoogleConfigFormValues) => {
     const payload: Partial<GoogleConfigFormValues> = { ...formData };
 
-    await updateInstanceConfigurations(payload)
-      .then((response = []) => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Done!",
-          message: "Your Google authentication is configured. You should test it now.",
-        });
-        reset({
-          GOOGLE_CLIENT_ID: response.find((item) => item.key === "GOOGLE_CLIENT_ID")?.value,
-          GOOGLE_CLIENT_SECRET: response.find((item) => item.key === "GOOGLE_CLIENT_SECRET")?.value,
-        });
-      })
-      .catch((err) => console.error(err));
+    try {
+      const response = await updateInstanceConfigurations(payload);
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Done!",
+        message: "Your Google authentication is configured. You should test it now.",
+      });
+      reset({
+        GOOGLE_CLIENT_ID: response.find((item) => item.key === "GOOGLE_CLIENT_ID")?.value,
+        GOOGLE_CLIENT_SECRET: response.find((item) => item.key === "GOOGLE_CLIENT_SECRET")?.value,
+        ENABLE_GOOGLE_SYNC: response.find((item) => item.key === "ENABLE_GOOGLE_SYNC")?.value,
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleGoBack = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
@@ -170,8 +185,8 @@ export function InstanceGoogleConfigForm(props: Props) {
         handleClose={() => setIsDiscardChangesModalOpen(false)}
       />
       <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-2 gap-x-12 gap-y-8 w-full">
-          <div className="flex flex-col gap-y-4 col-span-2 md:col-span-1 pt-1">
+        <div className="grid w-full grid-cols-2 gap-x-12 gap-y-8">
+          <div className="col-span-2 flex flex-col gap-y-4 pt-1 md:col-span-1">
             <div className="pt-2.5 text-18 font-medium">Google-provided details for Plane</div>
             {GOOGLE_FORM_FIELDS.map((field) => (
               <ControllerInput
@@ -186,16 +201,17 @@ export function InstanceGoogleConfigForm(props: Props) {
                 required={field.required}
               />
             ))}
+            <ControllerSwitch control={control} field={GOOGLE_FORM_SWITCH_FIELD} />
             <div className="flex flex-col gap-1 pt-4">
               <div className="flex items-center gap-4">
                 <Button
                   variant="primary"
                   size="lg"
-                  onClick={handleSubmit(onSubmit)}
+                  onClick={(e) => void handleSubmit(onSubmit)(e)}
                   loading={isSubmitting}
                   disabled={!isDirty}
                 >
-                  {isSubmitting ? "Saving..." : "Save changes"}
+                  {isSubmitting ? "Saving" : "Save changes"}
                 </Button>
                 <Link href="/authentication" className={getButtonStyling("secondary", "lg")} onClick={handleGoBack}>
                   Go back
@@ -203,24 +219,24 @@ export function InstanceGoogleConfigForm(props: Props) {
               </div>
             </div>
           </div>
-          <div className="col-span-2 md:col-span-1 flex flex-col gap-y-6">
+          <div className="col-span-2 flex flex-col gap-y-6 md:col-span-1">
             <div className="pt-2 text-18 font-medium">Plane-provided details for Google</div>
 
             <div className="flex flex-col gap-y-4">
               {/* common service details */}
-              <div className="flex flex-col gap-y-4 px-6 py-4 bg-layer-1 rounded-lg">
+              <div className="flex flex-col gap-y-4 rounded-lg bg-layer-1 px-6 py-4">
                 {GOOGLE_COMMON_SERVICE_DETAILS.map((field) => (
                   <CopyField key={field.key} label={field.label} url={field.url} description={field.description} />
                 ))}
               </div>
 
               {/* web service details */}
-              <div className="flex flex-col rounded-lg overflow-hidden">
-                <div className="px-6 py-3 bg-layer-1/60 font-medium text-11 uppercase flex items-center gap-x-3 text-secondary">
-                  <Monitor className="w-3 h-3" />
+              <div className="flex flex-col overflow-hidden rounded-lg">
+                <div className="flex items-center gap-x-3 bg-layer-3 px-6 py-3 text-11 font-medium text-secondary uppercase">
+                  <Monitor className="h-3 w-3" />
                   Web
                 </div>
-                <div className="px-6 py-4 flex flex-col gap-y-4 bg-layer-1">
+                <div className="flex flex-col gap-y-4 bg-layer-1 px-6 py-4">
                   {GOOGLE_SERVICE_DETAILS.map((field) => (
                     <CopyField key={field.key} label={field.label} url={field.url} description={field.description} />
                   ))}

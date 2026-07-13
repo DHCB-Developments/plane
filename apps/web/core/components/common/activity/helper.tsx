@@ -1,14 +1,18 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { FC, ReactNode } from "react";
 import {
   RotateCcw,
   Network,
-  Link as LinkIcon,
   Inbox,
   AlignLeft,
   Paperclip,
   Type,
   FileText,
-  Globe,
   Hash,
   Clock,
   Bell,
@@ -17,11 +21,13 @@ import {
   ListTodo,
   Layers,
 } from "lucide-react";
-
 // components
+
 import {
+  LinkIcon,
   ArchiveIcon,
   CycleIcon,
+  GlobeIcon,
   DueDatePropertyIcon,
   EstimatePropertyIcon,
   GridLayoutIcon,
@@ -34,7 +40,7 @@ import {
   StatePropertyIcon,
 } from "@plane/propel/icons";
 import { store } from "@/lib/store-context";
-import type { TProjectActivity } from "@/plane-web/types";
+import type { TProjectActivity } from "@plane/types";
 
 type ActivityIconMap = {
   [key: string]: FC<{ className?: string }>;
@@ -57,7 +63,7 @@ export const iconsMap: ActivityIconMap = {
   cycle: CycleIcon,
   module: ModuleIcon,
   page: FileText,
-  network: Globe,
+  network: GlobeIcon,
   identifier: Hash,
   timezone: Clock,
   is_project_updates_enabled: Bell,

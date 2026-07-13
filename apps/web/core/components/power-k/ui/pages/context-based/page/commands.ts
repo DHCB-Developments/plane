@@ -1,25 +1,22 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
-import {
-  ArchiveIcon,
-  ArchiveRestoreIcon,
-  Globe2,
-  LinkIcon,
-  Lock,
-  LockKeyhole,
-  LockKeyholeOpen,
-  Star,
-  StarOff,
-} from "lucide-react";
-// plane imports
+import { ArchiveIcon, ArchiveRestoreIcon, LockKeyhole, LockKeyholeOpen, Star, StarOff } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
+// plane imports
+import { LinkIcon, GlobeIcon, LockIcon } from "@plane/propel/icons";
 import { setToast, TOAST_TYPE } from "@plane/propel/toast";
 import { EPageAccess } from "@plane/types";
 import { copyTextToClipboard } from "@plane/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // plane web imports
-import { EPageStoreType, usePageStore } from "@/plane-web/hooks/store";
+import { EPageStoreType, usePageStore } from "@/hooks/store";
 
 export const usePowerKPageContextBasedActions = (): TPowerKCommandConfig[] => {
   // navigation
@@ -110,7 +107,7 @@ export const usePowerKPageContextBasedActions = (): TPowerKCommandConfig[] => {
         access === EPageAccess.PUBLIC
           ? "power_k.contextual_actions.page.make_private"
           : "power_k.contextual_actions.page.make_public",
-      icon: access === EPageAccess.PUBLIC ? Lock : Globe2,
+      icon: access === EPageAccess.PUBLIC ? LockIcon : GlobeIcon,
       group: "contextual",
       contextType: "page",
       type: "action",

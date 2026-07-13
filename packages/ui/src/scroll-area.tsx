@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import * as RadixScrollArea from "@radix-ui/react-scroll-area";
-import type { FC } from "react";
 import React from "react";
 import { cn } from "./utils";
 
@@ -35,7 +40,7 @@ export function ScrollArea(props: TScrollAreaProps) {
       <RadixScrollArea.Viewport className="size-full">{children}</RadixScrollArea.Viewport>
       <RadixScrollArea.Scrollbar
         className={cn(
-          "group/track flex touch-none select-none bg-transparent transition-colors duration-150 ease-out",
+          "group/track flex touch-none bg-transparent transition-colors duration-150 ease-out select-none",
           sizeStyles[size]
         )}
         orientation="vertical"
@@ -49,7 +54,7 @@ export function ScrollArea(props: TScrollAreaProps) {
       </RadixScrollArea.Scrollbar>
       <RadixScrollArea.Scrollbar
         className={cn(
-          "group/track flex touch-none select-none bg-transparent transition-colors duration-150 ease-out",
+          "group/track flex touch-none bg-transparent transition-colors duration-150 ease-out select-none",
           sizeStyles[size]
         )}
         orientation="horizontal"

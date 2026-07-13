@@ -1,9 +1,14 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
-import type { TIssue, TIssueServiceType } from "@plane/types";
+import type { TIssue, TIssueServiceType, TIssueRelationTypes } from "@plane/types";
 import { EIssueServiceType } from "@plane/types";
 import { Collapsible } from "@plane/ui";
 // components
@@ -13,7 +18,6 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // Plane-web
 import { CreateUpdateEpicModal } from "@/plane-web/components/epics/epic-modal";
 import { useTimeLineRelationOptions } from "@/plane-web/components/relations";
-import type { TIssueRelationTypes } from "@/plane-web/types";
 // helper
 import { DeleteIssueModal } from "../../delete-issue-modal";
 import { RelationIssueList } from "../../relations/issue-list";
@@ -130,15 +134,15 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
 
   return (
     <>
-      <div className="flex flex-col gap-">
+      <div className="gap- flex flex-col">
         {filteredRelationsArray.map((relation) => (
           <div key={relation.relationKey}>
             <Collapsible
               buttonClassName="w-full"
               title={
-                <div className={`flex items-center gap-1 px-2.5 py-1 h-9  w-full ${relation.className}`}>
+                <div className={`flex h-9 w-full items-center gap-1 px-2.5 py-1 ${relation.className}`}>
                   <span>{relation.icon ? relation.icon(14) : null}</span>
-                  <span className="text-13 font-medium leading-5">{relation.label}</span>
+                  <span className="text-13 leading-5 font-medium">{relation.label}</span>
                 </div>
               }
               defaultOpen

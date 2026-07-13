@@ -1,15 +1,14 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { MoreHorizontal } from "lucide-react";
-
 // plane imports
-import {
-  EUserPermissions,
-  EUserPermissionsLevel,
-  MODULE_TRACKER_ELEMENTS,
-  MODULE_TRACKER_EVENTS,
-} from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { IconButton } from "@plane/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TContextMenuItem } from "@plane/ui";
@@ -18,8 +17,6 @@ import { copyUrlToClipboard, cn } from "@plane/utils";
 // components
 import { useModuleMenuItems } from "@/components/common/quick-actions-helper";
 import { ArchiveModuleModal, CreateUpdateModuleModal, DeleteModuleModal } from "@/components/modules";
-// helpers
-import { captureClick, captureSuccess, captureError } from "@/helpers/event-tracker.helper";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -46,7 +43,6 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
 
   const { getModuleById, restoreModule } = useModule();
 
-  const { t } = useTranslation();
   // derived values
   const moduleDetails = getModuleById(moduleId);
   // auth
@@ -68,32 +64,23 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
     });
   const handleOpenInNewTab = () => window.open(`/${moduleLink}`, "_blank");
 
-  const handleRestoreModule = async () =>
-    await restoreModule(workspaceSlug, projectId, moduleId)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Restore success",
-          message: "Your module can be found in project modules.",
-        });
-        captureSuccess({
-          eventName: MODULE_TRACKER_EVENTS.restore,
-          payload: { id: moduleId },
-        });
-        router.push(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
-      })
-      .catch((error) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Module could not be restored. Please try again.",
-        });
-        captureError({
-          eventName: MODULE_TRACKER_EVENTS.restore,
-          payload: { id: moduleId },
-          error,
-        });
+  const handleRestoreModule = async () => {
+    try {
+      await restoreModule(workspaceSlug, projectId, moduleId);
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Restore success",
+        message: "Your module can be found in project modules.",
       });
+      router.push(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
+    } catch (_error) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: "Module could not be restored. Please try again.",
+      });
+    }
+  };
 
   // Use unified menu hook from plane-web (resolves to CE or EE)
   const menuResult = useModuleMenuItems({
@@ -119,9 +106,6 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
       ...item,
 
       onClick: () => {
-        captureClick({
-          elementName: MODULE_TRACKER_ELEMENTS.CONTEXT_MENU,
-        });
         item.action();
       },
     };
@@ -162,9 +146,6 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
             <CustomMenu.MenuItem
               key={item.key}
               onClick={() => {
-                captureClick({
-                  elementName: MODULE_TRACKER_ELEMENTS.QUICK_ACTIONS,
-                });
                 item.action();
               }}
               className={cn(
@@ -181,7 +162,7 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
                 <h5>{item.title}</h5>
                 {item.description && (
                   <p
-                    className={cn("text-tertiary whitespace-pre-line", {
+                    className={cn("whitespace-pre-line text-tertiary", {
                       "text-placeholder": item.disabled,
                     })}
                   >

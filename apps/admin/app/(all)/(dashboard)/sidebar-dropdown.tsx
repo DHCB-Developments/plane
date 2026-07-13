@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { Fragment, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useTheme as useNextTheme } from "next-themes";
@@ -33,14 +39,14 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
   const getSidebarMenuItems = () => (
     <Menu.Items
       className={cn(
-        "absolute left-0 z-20 mt-1.5 flex w-52 flex-col divide-y divide-subtle rounded-md border border-subtle bg-surface-1 px-1 py-2 text-11 shadow-lg outline-none",
+        "shadow-lg absolute left-0 z-20 mt-1.5 flex w-52 flex-col divide-y divide-subtle rounded-md border border-subtle bg-surface-1 px-1 py-2 text-11 outline-none",
         {
           "left-4": isSidebarCollapsed,
         }
       )}
     >
       <div className="flex flex-col gap-2.5 pb-2">
-        <span className="px-2 text-secondary truncate">{currentUser?.email}</span>
+        <span className="truncate px-2 text-secondary">{currentUser?.email}</span>
       </div>
       <div className="py-2">
         <Menu.Item
@@ -71,14 +77,14 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
 
   useEffect(() => {
     if (csrfToken === undefined)
-      authService.requestCSRFToken().then((data) => data?.csrf_token && setCsrfToken(data.csrf_token));
+      void authService.requestCSRFToken().then((data) => data?.csrf_token && setCsrfToken(data.csrf_token));
   }, [csrfToken]);
 
   return (
-    <div className="flex max-h-header items-center gap-x-5 gap-y-2 border-b border-subtle px-4 py-3.5">
+    <div className="flex max-h-header items-center gap-x-5 gap-y-2 border-b border-subtle px-4 py-2.5">
       <div className="h-full w-full truncate">
         <div
-          className={`flex flex-grow items-center gap-x-2 truncate rounded-sm py-1 ${
+          className={`flex flex-grow items-center gap-x-2 truncate rounded-sm ${
             isSidebarCollapsed ? "justify-center" : ""
           }`}
         >
@@ -88,8 +94,8 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
                 "cursor-default": !isSidebarCollapsed,
               })}
             >
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-sm bg-layer-1">
-                <UserCog2 className="h-5 w-5 text-secondary" />
+              <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-sm bg-layer-1">
+                <UserCog2 className="size-5 text-primary" />
               </div>
             </Menu.Button>
             {isSidebarCollapsed && (
@@ -109,7 +115,7 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
 
           {!isSidebarCollapsed && (
             <div className="flex w-full gap-2">
-              <h4 className="grow truncate text-14 font-medium text-secondary">Instance admin</h4>
+              <h4 className="grow truncate text-body-md-medium text-primary">Instance admin</h4>
             </div>
           )}
         </div>
@@ -123,7 +129,7 @@ export const AdminSidebarDropdown = observer(function AdminSidebarDropdown() {
               src={getFileURL(currentUser.avatar_url)}
               size={24}
               shape="square"
-              className="!text-14"
+              className="!text-body-sm-medium"
             />
           </Menu.Button>
 

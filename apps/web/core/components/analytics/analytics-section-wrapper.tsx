@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { cn } from "@plane/utils";
 
 type Props = {
@@ -10,12 +16,12 @@ type Props = {
 };
 
 function AnalyticsSectionWrapper(props: Props) {
-  const { title, children, className, subtitle, actions, headerClassName } = props;
+  const { title, children, className, actions, headerClassName } = props;
   return (
     <div className={className}>
-      <div className={cn("mb-6 flex items-center gap-2 text-nowrap ", headerClassName)}>
+      <div className={cn("mb-6 flex items-center gap-2 text-nowrap", headerClassName)}>
         {title && (
-          <div className="flex  items-center gap-2 ">
+          <div className="flex items-center gap-2">
             <h1 className={"text-16 font-medium"}>{title}</h1>
             {/* {subtitle && <p className="text-16 text-tertiary"> • {subtitle}</p>} */}
           </div>

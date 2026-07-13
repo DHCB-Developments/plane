@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { observer } from "mobx-react";
@@ -10,7 +16,7 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IProject, IUserLite, IWorkspace } from "@plane/types";
 import { Loader, ToggleSwitch } from "@plane/ui";
 // constants
-import { PROJECT_DETAILS } from "@/constants/fetch-keys";
+import { PROJECT_DETAILS } from "@plane/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -132,7 +138,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   };
 
   return (
-    <div className="flex flex-col gap-y-6 my-6">
+    <div className="my-6 flex flex-col gap-y-6">
       <DefaultSettingItem title="Project Lead" description="Select the project lead for the project.">
         {currentProjectDetails ? (
           <Controller

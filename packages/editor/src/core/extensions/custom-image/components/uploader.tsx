@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { ImageIcon, RotateCcw } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -205,17 +211,17 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
   return (
     <div
       className={cn(
-        "image-upload-component flex items-center justify-start gap-2 py-3 px-2 rounded-lg text-tertiary bg-layer-2 border border-dashed transition-all duration-200 ease-in-out cursor-default",
+        "image-upload-component flex cursor-default items-center justify-start gap-2 rounded-lg border border-dashed bg-layer-3 px-2 py-3 text-tertiary transition-all duration-200 ease-in-out",
         {
           "border-subtle": !(selected && editor.isEditable && !isErrorState),
-          "hover:text-secondary hover:bg-layer-2-hover cursor-pointer": editor.isEditable && !isErrorState,
-          "bg-layer-2-hover text-secondary": draggedInside && editor.isEditable && !isErrorState,
-          "text-accent-secondary bg-accent-primary/10 hover:bg-accent-primary/10 hover:text-accent-secondary":
+          "cursor-pointer hover:bg-layer-3-hover hover:text-secondary": editor.isEditable && !isErrorState,
+          "bg-layer-3-hover text-secondary": draggedInside && editor.isEditable && !isErrorState,
+          "bg-accent-primary/10 text-accent-secondary hover:bg-accent-primary/10 hover:text-accent-secondary":
             selected && editor.isEditable && !isErrorState,
-          "text-red-500 cursor-default": isErrorState,
-          "hover:text-red-500 hover:bg-red-500/10": isErrorState && editor.isEditable,
-          "bg-red-500/10": isErrorState && selected,
-          "hover:bg-red-500/20": isErrorState && selected && editor.isEditable,
+          "cursor-default bg-danger-subtle text-danger-primary": isErrorState,
+          "hover:bg-danger-subtle-hover hover:text-danger-primary": isErrorState && editor.isEditable,
+          "bg-danger-subtle-selected": isErrorState && selected,
+          "hover:bg-danger-subtle-active": isErrorState && selected && editor.isEditable,
         }
       )}
       style={borderColor ? { borderColor } : undefined}
@@ -230,15 +236,15 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
       }}
     >
       <ImageIcon className="size-4" />
-      <div className="text-14 font-medium flex-1">{getDisplayMessage()}</div>
+      <div className="flex-1 text-14 font-medium">{getDisplayMessage()}</div>
       {hasDuplicationFailed && editor.isEditable && (
         <button
           type="button"
           onClick={handleRetryClick}
           className={cn(
-            "flex items-center gap-1 px-2 py-1 font-medium text-red-500 rounded-md transition-all duration-200 ease-in-out hover:bg-red-500/20 hover:text-red-500",
+            "flex items-center gap-1 rounded-md px-2 py-1 font-medium text-danger-primary transition-all duration-200 ease-in-out hover:bg-danger-subtle-hover",
             {
-              "hover:bg-red-500/20": selected,
+              "hover:bg-danger-subtle-hover": selected,
             }
           )}
           title="Retry duplication"

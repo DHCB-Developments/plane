@@ -1,3 +1,7 @@
+# Copyright (c) 2023-present Plane Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
 """Development settings"""
 
 import os
@@ -42,7 +46,7 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "()": "pythonjsonlogger.json.JsonFormatter",
             "fmt": "%(levelname)s %(asctime)s %(module)s %(name)s %(message)s",
         },
     },
@@ -71,7 +75,7 @@ LOGGING = {
             "handlers": ["console"],
             "propagate": False,
         },
-        "plane.mongo": {
+        "plane.authentication": {
             "level": "INFO",
             "handlers": ["console"],
             "propagate": False,

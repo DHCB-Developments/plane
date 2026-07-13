@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React from "react";
 import { observer } from "mobx-react";
 import Link from "next/link";
-import { Pencil } from "lucide-react";
-import { CloseIcon } from "@plane/propel/icons";
+
+import { EditIcon, CloseIcon } from "@plane/propel/icons";
 // Plane
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { Tooltip } from "@plane/propel/tooltip";
@@ -17,7 +23,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // Plane web imports
 import { useTimeLineRelationOptions } from "@/plane-web/components/relations";
-import type { TIssueRelationTypes } from "@/plane-web/types";
+import type { TIssueRelationTypes } from "@plane/types";
 import type { TRelationObject } from "../issue-detail-widgets/relations";
 
 type TIssueRelationSelect = {
@@ -111,7 +117,7 @@ export const IssueRelationSelect = observer(function IssueRelationSelect(props: 
                 return (
                   <div
                     key={relationIssueId}
-                    className={`group flex items-center gap-1 rounded-sm px-1.5 pb-1 pt-1 leading-3 hover:bg-surface-2 ${currRelationOption?.className}`}
+                    className={`group flex items-center gap-1 rounded-sm px-1.5 pt-1 pb-1 leading-3 hover:bg-surface-2 ${currRelationOption?.className}`}
                   >
                     <Tooltip tooltipHeading="Title" tooltipContent={currentIssue.name} isMobile={isMobile}>
                       <Link
@@ -139,7 +145,7 @@ export const IssueRelationSelect = observer(function IssueRelationSelect(props: 
                             removeRelation(workspaceSlug, projectId, issueId, relationKey, relationIssueId);
                           }}
                         >
-                          <CloseIcon className="h-2.5 w-2.5 text-tertiary hover:text-danger" />
+                          <CloseIcon className="h-2.5 w-2.5 text-tertiary hover:text-danger-primary" />
                         </span>
                       </Tooltip>
                     )}
@@ -156,7 +162,7 @@ export const IssueRelationSelect = observer(function IssueRelationSelect(props: 
                 "text-placeholder": relationIssueIds.length === 0,
               })}
             >
-              <Pencil className="h-2.5 w-2.5 flex-shrink-0" />
+              <EditIcon className="h-2.5 w-2.5 flex-shrink-0" />
             </span>
           )}
         </div>

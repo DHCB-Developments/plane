@@ -1,9 +1,14 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
-import { CloseIcon } from "@plane/propel/icons";
+import { SearchIcon, CloseIcon } from "@plane/propel/icons";
 import type { IIssueFilterOptions, IState } from "@plane/types";
 import { cn } from "@plane/utils";
 import {
@@ -44,11 +49,11 @@ export const SubIssueFilters = observer(function SubIssueFilters(props: TSubIssu
         menuButton={
           <div
             className={cn(
-              "p-1 rounded-sm  relative transition-all duration-200",
+              "relative rounded-sm p-1 transition-all duration-200",
               isFilterApplied && "bg-accent-primary/20"
             )}
           >
-            {isFilterApplied && <span className="p-1 rounded-full bg-accent-primary absolute -top-1 -right-1" />}
+            {isFilterApplied && <span className="absolute -top-1 -right-1 rounded-full bg-accent-primary p-1" />}
             <ListFilter className="h-3.5 w-3.5 text-primary" />
           </div>
         }
@@ -56,7 +61,7 @@ export const SubIssueFilters = observer(function SubIssueFilters(props: TSubIssu
         <div className="flex max-h-[350px] flex-col overflow-hidden">
           <div className="bg-surface-1 p-2.5 pb-0">
             <div className="flex items-center gap-1.5 rounded-sm border-[0.5px] border-subtle bg-surface-2 px-1.5 py-1 text-11">
-              <Search className="text-placeholder" size={12} strokeWidth={2} />
+              <SearchIcon className="text-placeholder" width={12} height={12} strokeWidth={2} />
               <input
                 type="text"
                 className="w-full bg-surface-2 outline-none placeholder:text-placeholder"

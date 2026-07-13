@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { Loader } from "lucide-react";
-import { STATE_TRACKER_EVENTS, STATE_TRACKER_ELEMENTS } from "@plane/constants";
 import { CloseIcon } from "@plane/propel/icons";
 // plane imports
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -10,18 +15,17 @@ import type { IState, TStateOperationsCallbacks } from "@plane/types";
 import { AlertModalCore } from "@plane/ui";
 import { cn } from "@plane/utils";
 // hooks
-import { captureError, captureSuccess } from "@/helpers/event-tracker.helper";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TStateDelete = {
   totalStates: number;
   state: IState;
   deleteStateCallback: TStateOperationsCallbacks["deleteState"];
-  shouldTrackEvents: boolean;
+  shouldTrackEvents?: boolean;
 };
 
 export const StateDelete = observer(function StateDelete(props: TStateDelete) {
-  const { totalStates, state, deleteStateCallback, shouldTrackEvents } = props;
+  const { totalStates, state, deleteStateCallback } = props;
   // hooks
   const { isMobile } = usePlatformOS();
   // states
@@ -37,26 +41,9 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
 
     try {
       await deleteStateCallback(state.id);
-      if (shouldTrackEvents) {
-        captureSuccess({
-          eventName: STATE_TRACKER_EVENTS.delete,
-          payload: {
-            id: state.id,
-          },
-        });
-      }
-
       setIsDelete(false);
     } catch (error) {
       const errorStatus = error as { status: number; data: { error: string } };
-      if (shouldTrackEvents) {
-        captureError({
-          eventName: STATE_TRACKER_EVENTS.delete,
-          payload: {
-            id: state.id,
-          },
-        });
-      }
       if (errorStatus.status === 400) {
         setToast({
           type: TOAST_TYPE.ERROR,
@@ -94,12 +81,11 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
       <button
         type="button"
         className={cn(
-          "flex-shrink-0 w-5 h-5 rounded-sm flex justify-center items-center overflow-hidden transition-colors cursor-pointer focus:outline-none",
-          isDeleteDisabled ? "bg-surface-2 text-secondary" : "text-red-500 hover:bg-layer-1"
+          "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors focus:outline-none",
+          isDeleteDisabled ? "bg-surface-2 text-secondary" : "text-danger-primary hover:bg-layer-1"
         )}
         disabled={isDeleteDisabled}
         onClick={() => setIsDeleteModal(true)}
-        data-ph-element={STATE_TRACKER_ELEMENTS.STATE_LIST_DELETE_BUTTON}
       >
         <Tooltip
           tooltipContent={
@@ -109,7 +95,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
           disabled={!isDeleteDisabled}
           className="focus:outline-none"
         >
-          {isDelete ? <Loader className="w-3.5 h-3.5 text-secondary" /> : <CloseIcon className="w-3.5 h-3.5" />}
+          {isDelete ? <Loader className="h-3.5 w-3.5 text-secondary" /> : <CloseIcon className="h-3.5 w-3.5" />}
         </Tooltip>
       </button>
     </>

@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback } from "react";
 // plane editor
 import type { TMentionSection, TMentionSuggestion } from "@plane/editor";
@@ -8,7 +14,7 @@ import { Avatar } from "@plane/ui";
 // helpers
 import { getFileURL } from "@plane/utils";
 // plane web hooks
-import { useAdditionalEditorMention } from "@/plane-web/hooks/use-additional-editor-mention";
+import { useAdditionalEditorMention } from "@/hooks/use-additional-editor-mention";
 
 type TArgs = {
   enableAdvancedMentions?: boolean;

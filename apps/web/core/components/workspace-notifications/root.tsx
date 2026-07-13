@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
@@ -12,8 +18,7 @@ import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkspaceIssueProperties } from "@/hooks/use-workspace-issue-properties";
-// plane web imports
-import { useNotificationPreview } from "@/plane-web/hooks/use-notification-preview";
+import { useNotificationPreview } from "@/hooks/use-notification-preview";
 // local imports
 import { InboxContentRoot } from "../inbox/content";
 
@@ -78,9 +83,9 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
   );
 
   return (
-    <div className={cn("w-full h-full overflow-hidden ", isWorkItem && "overflow-y-auto")}>
+    <div className={cn("h-full w-full overflow-hidden", isWorkItem && "overflow-y-auto")}>
       {!currentSelectedNotificationId ? (
-        <div className="flex justify-center items-center size-full">
+        <div className="flex size-full items-center justify-center">
           <EmptyStateCompact assetKey="unknown" assetClassName="size-20" />
         </div>
       ) : (
@@ -88,7 +93,7 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
           {is_inbox_issue === true && workspace_slug && project_id && issue_id ? (
             <>
               {projectMemberInfoLoader ? (
-                <div className="w-full h-full flex justify-center items-center">
+                <div className="flex h-full w-full items-center justify-center">
                   <LogoSpinner />
                 </div>
               ) : (

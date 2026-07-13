@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React, { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
@@ -35,6 +41,7 @@ type Props = TDropdownProps & {
   closeOnSelect?: boolean;
   formatToken?: string;
   renderByDefault?: boolean;
+  labelClassName?: string;
 };
 
 export const DateDropdown = observer(function DateDropdown(props: Props) {
@@ -62,6 +69,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
     value,
     formatToken,
     renderByDefault = true,
+    labelClassName = "",
   } = props;
   // states
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -138,7 +146,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
       >
         {!hideIcon && icon}
         {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-          <span className="flex-grow truncate text-left text-body-xs-medium">
+          <span className={cn("flex-grow truncate text-left text-body-xs-medium", labelClassName)}>
             {value ? renderFormattedDate(value, formatToken) : placeholder}
           </span>
         )}
@@ -176,7 +184,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
           <Combobox.Options data-prevent-outside-click static>
             <div
               className={cn(
-                "my-1 bg-surface-1 shadow-raised-200 border-[0.5px] border-strong rounded-md overflow-hidden z-30",
+                "z-30 my-1 overflow-hidden rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200",
                 optionsClassName
               )}
               ref={setPopperElement}

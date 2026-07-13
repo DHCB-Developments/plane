@@ -1,29 +1,11 @@
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { PageIcon } from "@plane/propel/icons";
-// plane imports
-import type { IFavorite, TLogoProps } from "@plane/types";
-// components
-// plane web constants
-import { FAVORITE_ITEM_ICONS, FAVORITE_ITEM_LINKS } from "@/plane-web/constants/sidebar-favorites";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
 
-export const getFavoriteItemIcon = (type: string, logo?: TLogoProps) => {
-  const Icon = FAVORITE_ITEM_ICONS[type] || PageIcon;
-
-  return (
-    <>
-      <div className="hidden group-hover:flex items-center justify-center size-5">
-        <Icon className="flex-shrink-0 size-4 stroke-[1.5] m-auto" />
-      </div>
-      <div className="flex items-center justify-center size-5 group-hover:hidden">
-        {logo?.in_use ? (
-          <Logo logo={logo} size={16} type={type === "project" ? "material" : "lucide"} />
-        ) : (
-          <Icon className="flex-shrink-0 size-4 stroke-[1.5] m-auto" />
-        )}
-      </div>
-    </>
-  );
-};
+import { FAVORITE_ITEM_LINKS } from "@plane/constants";
+import type { IFavorite } from "@plane/types";
 
 export const generateFavoriteItemLink = (workspaceSlug: string, favorite: IFavorite) => {
   const entityLinkDetails = FAVORITE_ITEM_LINKS[favorite.entity_type];

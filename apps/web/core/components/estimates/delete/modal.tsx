@@ -1,13 +1,16 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { observer } from "mobx-react";
 // ui
-import { PROJECT_SETTINGS_TRACKER_EVENTS } from "@plane/constants";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
-import { captureError, captureSuccess } from "@/helpers/event-tracker.helper";
 import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useEstimate } from "@/hooks/store/estimates/use-estimate";
 import { useProject } from "@/hooks/store/use-project";
@@ -34,32 +37,19 @@ export const DeleteEstimateModal = observer(function DeleteEstimateModal(props: 
     try {
       if (!workspaceSlug || !projectId || !estimateId) return;
       setButtonLoader(true);
-
       await deleteEstimate(workspaceSlug, projectId, estimateId);
       if (areEstimateEnabledByProjectId(projectId)) {
         await updateProject(workspaceSlug, projectId, { estimate: null });
       }
       setButtonLoader(false);
-      captureSuccess({
-        eventName: PROJECT_SETTINGS_TRACKER_EVENTS.estimate_deleted,
-        payload: {
-          id: estimateId,
-        },
-      });
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Estimate deleted",
         message: "Estimate has been removed from your project.",
       });
       handleClose();
-    } catch (error) {
+    } catch (_error) {
       setButtonLoader(false);
-      captureError({
-        eventName: PROJECT_SETTINGS_TRACKER_EVENTS.estimate_deleted,
-        payload: {
-          id: estimateId,
-        },
-      });
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Estimate creation failed",
@@ -72,7 +62,7 @@ export const DeleteEstimateModal = observer(function DeleteEstimateModal(props: 
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>
       <div className="relative space-y-6 py-5">
         {/* heading */}
-        <div className="relative flex justify-between items-center gap-2 px-5">
+        <div className="relative flex items-center justify-between gap-2 px-5">
           <div className="text-18 font-medium text-primary">Delete Estimate System</div>
         </div>
 
@@ -85,7 +75,7 @@ export const DeleteEstimateModal = observer(function DeleteEstimateModal(props: 
           </div>
         </div>
 
-        <div className="relative flex justify-end items-center gap-3 px-5 pt-5 border-t border-subtle">
+        <div className="relative flex items-center justify-end gap-3 border-t border-subtle px-5 pt-5">
           <Button variant="secondary" size="lg" onClick={handleClose} disabled={buttonLoader}>
             Cancel
           </Button>

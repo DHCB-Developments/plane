@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { TContextMenuItem } from "@plane/ui";
 import { CustomMenu } from "@plane/ui";
 import { copyUrlToClipboard, cn } from "@plane/utils";
 import { useLayoutMenuItems } from "@/components/common/quick-actions-helper";
-import { Ellipsis, MoreHorizontal } from "lucide-react";
+import { Ellipsis } from "lucide-react";
 import { IconButton } from "@plane/propel/icon-button";
 
 type Props = {
@@ -48,7 +54,7 @@ export const LayoutQuickActions = observer(function LayoutQuickActions(props: Pr
         placement="bottom-end"
         closeOnSelect
         maxHeight="lg"
-        className="flex-shrink-0 flex items-center justify-center size-[26px] rounded"
+        className="flex size-[26px] flex-shrink-0 items-center justify-center rounded"
         customButton={<IconButton size="lg" variant="tertiary" icon={Ellipsis} />}
       >
         {MENU_ITEMS.map((item) => {

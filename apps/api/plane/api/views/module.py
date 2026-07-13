@@ -1,3 +1,7 @@
+# Copyright (c) 2023-present Plane Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
 # Python imports
 import json
 
@@ -38,6 +42,7 @@ from plane.db.models import (
 from .base import BaseAPIView
 from plane.bgtasks.webhook_task import model_activity
 from plane.utils.host import base_host
+from plane.utils.order_queryset import ISSUE_ORDER_BY_ALLOWLIST, sanitize_order_by
 from plane.utils.openapi import (
     module_docs,
     module_issue_docs,
@@ -410,7 +415,7 @@ class ModuleDetailAPIEndpoint(BaseAPIView):
                 {"error": "Archived module cannot be edited"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        serializer = ModuleSerializer(module, data=request.data, context={"project_id": project_id}, partial=True)
+        serializer = ModuleUpdateSerializer(module, data=request.data, context={"project_id": project_id}, partial=True)
         if serializer.is_valid():
             if (
                 request.data.get("external_id")
@@ -593,7 +598,7 @@ class ModuleIssueListCreateAPIEndpoint(BaseAPIView):
         Retrieve all work items assigned to a module with detailed information.
         Returns paginated results including assignees, labels, and attachments.
         """
-        order_by = request.GET.get("order_by", "created_at")
+        order_by = sanitize_order_by(request.GET.get("order_by", "created_at"), ISSUE_ORDER_BY_ALLOWLIST, "created_at")
         issues = (
             Issue.issue_objects.filter(issue_module__module_id=module_id, issue_module__deleted_at__isnull=True)
             .annotate(
@@ -799,7 +804,7 @@ class ModuleIssueDetailAPIEndpoint(BaseAPIView):
         Retrieve all work items assigned to a module with detailed information.
         Returns paginated results including assignees, labels, and attachments.
         """
-        order_by = request.GET.get("order_by", "created_at")
+        order_by = sanitize_order_by(request.GET.get("order_by", "created_at"), ISSUE_ORDER_BY_ALLOWLIST, "created_at")
         issues = (
             Issue.issue_objects.filter(
                 issue_module__module_id=module_id,

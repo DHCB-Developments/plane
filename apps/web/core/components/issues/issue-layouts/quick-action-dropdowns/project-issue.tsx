@@ -1,21 +1,20 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useState } from "react";
 import { omit } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // plane imports
-import {
-  ARCHIVABLE_STATE_GROUPS,
-  EUserPermissions,
-  EUserPermissionsLevel,
-  WORK_ITEM_TRACKER_ELEMENTS,
-} from "@plane/constants";
+import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import type { TIssue } from "@plane/types";
 import { EIssuesStoreType } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
 import { ContextMenu, CustomMenu } from "@plane/ui";
 import { cn } from "@plane/utils";
 // hooks
-import { captureClick } from "@/helpers/event-tracker.helper";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -108,7 +107,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
       ...item,
 
       onClick: () => {
-        captureClick({ elementName: WORK_ITEM_TRACKER_ELEMENTS.QUICK_ACTIONS.PROJECT_VIEW });
         item.action();
       },
     };
@@ -175,7 +173,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
                     <h5>{item.title}</h5>
                     {item.description && (
                       <p
-                        className={cn("text-tertiary whitespace-pre-line", {
+                        className={cn("whitespace-pre-line text-tertiary", {
                           "text-placeholder": item.disabled,
                         })}
                       >
@@ -197,7 +195,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
                   <CustomMenu.MenuItem
                     key={nestedItem.key}
                     onClick={() => {
-                      captureClick({ elementName: WORK_ITEM_TRACKER_ELEMENTS.QUICK_ACTIONS.PROJECT_VIEW });
                       nestedItem.action();
                     }}
                     className={cn(
@@ -214,7 +211,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
                       <h5>{nestedItem.title}</h5>
                       {nestedItem.description && (
                         <p
-                          className={cn("text-tertiary whitespace-pre-line", {
+                          className={cn("whitespace-pre-line text-tertiary", {
                             "text-placeholder": nestedItem.disabled,
                           })}
                         >
@@ -233,7 +230,6 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
             <CustomMenu.MenuItem
               key={item.key}
               onClick={() => {
-                captureClick({ elementName: WORK_ITEM_TRACKER_ELEMENTS.QUICK_ACTIONS.PROJECT_VIEW });
                 item.action();
               }}
               className={cn(
@@ -250,7 +246,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
                 <h5>{item.title}</h5>
                 {item.description && (
                   <p
-                    className={cn("text-tertiary whitespace-pre-line", {
+                    className={cn("whitespace-pre-line text-tertiary", {
                       "text-placeholder": item.disabled,
                     })}
                   >

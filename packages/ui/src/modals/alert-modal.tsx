@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, Info } from "lucide-react";
 import React from "react";
 // components
-import type { TButtonVariant } from "../button";
-import { Button } from "../button";
+import type { TButtonVariant } from "@plane/propel/button";
+import { Button } from "@plane/propel/button";
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
 import { ModalCore } from "./modal-core";
@@ -28,6 +34,7 @@ type Props = {
   title: string;
   variant?: TModalVariant;
   width?: EModalWidth;
+  customIcon?: React.ReactNode;
 };
 
 const VARIANT_ICONS: Record<TModalVariant, LucideIcon> = {
@@ -36,12 +43,12 @@ const VARIANT_ICONS: Record<TModalVariant, LucideIcon> = {
 };
 
 const BUTTON_VARIANTS: Record<TModalVariant, TButtonVariant> = {
-  danger: "danger",
+  danger: "error-fill",
   primary: "primary",
 };
 
 const VARIANT_CLASSES: Record<TModalVariant, string> = {
-  danger: "bg-red-500/20 text-red-500",
+  danger: "bg-danger-subtle text-danger-primary",
   primary: "bg-accent-primary/20 text-accent-primary",
 };
 
@@ -62,21 +69,22 @@ export function AlertModalCore(props: Props) {
     title,
     variant = "danger",
     width = EModalWidth.XL,
+    customIcon,
   } = props;
 
   const Icon = VARIANT_ICONS[variant];
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={position} width={width}>
-      <div className="p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+      <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-start">
         {!hideIcon && (
           <span
             className={cn(
-              "flex-shrink-0 grid place-items-center rounded-full size-12 sm:size-10",
+              "grid size-12 flex-shrink-0 place-items-center rounded-full sm:size-10",
               VARIANT_CLASSES[variant]
             )}
           >
-            <Icon className="size-5" aria-hidden="true" />
+            {customIcon ? <>{customIcon}</> : <Icon className="size-5" aria-hidden="true" />}
           </span>
         )}
         <div className="text-center sm:text-left">
@@ -84,8 +92,8 @@ export function AlertModalCore(props: Props) {
           <p className="mt-1 text-13 text-secondary">{content}</p>
         </div>
       </div>
-      <div className="px-5 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t-[0.5px] border-subtle">
-        <Button variant="neutral-primary" onClick={handleClose}>
+      <div className="flex flex-col-reverse gap-2 border-t-[0.5px] border-subtle px-5 py-4 sm:flex-row sm:justify-end">
+        <Button variant="secondary" onClick={handleClose}>
           {secondaryButtonText}
         </Button>
         <Button variant={BUTTON_VARIANTS[variant]} tabIndex={1} onClick={handleSubmit} loading={isSubmitting}>

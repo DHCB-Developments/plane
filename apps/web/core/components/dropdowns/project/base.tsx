@@ -1,20 +1,25 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
-import { Check, Search } from "lucide-react";
 import { Combobox } from "@headlessui/react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import { Logo } from "@plane/propel/emoji-icon-picker";
-import { ProjectIcon, ChevronDownIcon } from "@plane/propel/icons";
+import { CheckIcon, SearchIcon, ProjectIcon, ChevronDownIcon } from "@plane/propel/icons";
 import { ComboDropDown } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { cn, sortBySelectedFirst } from "@plane/utils";
 // components
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
 // plane web imports
-import type { TProject } from "@/plane-web/types";
+import type { TProject } from "@plane/types";
 // local imports
 import { DropdownButton } from "../buttons";
 import { BUTTON_VARIANTS_WITH_TEXT } from "../constants";
@@ -101,7 +106,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
       content: (
         <div className="flex items-center gap-2">
           {projectDetails?.logo_props && (
-            <span className="grid place-items-center flex-shrink-0 h-4 w-4">
+            <span className="grid h-4 w-4 flex-shrink-0 place-items-center">
               <Logo logo={projectDetails?.logo_props} size={12} />
             </span>
           )}
@@ -111,10 +116,13 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     };
   });
 
-  const filteredOptions =
-    query === ""
+  const filteredOptions = sortBySelectedFirst(
+    (query === ""
       ? options?.filter((o) => o?.value !== currentProjectId)
-      : options?.filter((o) => o?.value !== currentProjectId && o?.query.toLowerCase().includes(query.toLowerCase()));
+      : options?.filter((o) => o?.value !== currentProjectId && o?.query.toLowerCase().includes(query.toLowerCase()))
+    )?.filter((o): o is NonNullable<typeof o> => o !== undefined),
+    value
+  );
 
   const { handleClose, handleKeyDown, handleOnClick, searchInputKeyDown } = useDropdown({
     dropdownRef,
@@ -142,7 +150,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
 
   const getProjectIcon = (value: string | string[] | null) => {
     const renderIcon = (logoProps: TProject["logo_props"]) => (
-      <span className="grid place-items-center flex-shrink-0 h-4 w-4">
+      <span className="grid h-4 w-4 flex-shrink-0 place-items-center">
         <Logo logo={logoProps} size={14} />
       </span>
     );
@@ -204,7 +212,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
           >
             {!hideIcon && getProjectIcon(value)}
             {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-              <span className="truncate max-w-40">{getDisplayName(value, placeholder)}</span>
+              <span className="max-w-40 truncate">{getDisplayName(value, placeholder)}</span>
             )}
             {dropdownArrow && (
               <ChevronDownIcon className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)} aria-hidden="true" />
@@ -238,7 +246,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
             {...attributes.popper}
           >
             <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-              <Search className="h-3.5 w-3.5 text-placeholder" strokeWidth={1.5} />
+              <SearchIcon className="h-3.5 w-3.5 text-placeholder" strokeWidth={1.5} />
               <Combobox.Input
                 as="input"
                 ref={inputRef}
@@ -260,7 +268,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
                         key={option.value}
                         value={option.value}
                         className={({ active, selected }) =>
-                          `w-full truncate flex items-center justify-between gap-2 rounded-sm px-1 py-1.5 cursor-pointer select-none ${
+                          `flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none ${
                             active ? "bg-layer-transparent-hover" : ""
                           } ${selected ? "text-primary" : "text-secondary"}`
                         }
@@ -268,17 +276,17 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
                         {({ selected }) => (
                           <>
                             <span className="flex-grow truncate">{option.content}</span>
-                            {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                            {selected && <CheckIcon className="h-3.5 w-3.5 flex-shrink-0" />}
                           </>
                         )}
                       </Combobox.Option>
                     );
                   })
                 ) : (
-                  <p className="text-placeholder italic py-1 px-1.5">{t("no_matching_results")}</p>
+                  <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
                 )
               ) : (
-                <p className="text-placeholder italic py-1 px-1.5">{t("loading")}</p>
+                <p className="px-1.5 py-1 text-placeholder italic">{t("loading")}</p>
               )}
             </div>
           </div>

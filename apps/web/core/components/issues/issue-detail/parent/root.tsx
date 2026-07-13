@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { observer } from "mobx-react";
 import { useRouter } from "next/navigation";
 import { MinusCircle } from "lucide-react";
@@ -68,7 +74,7 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
 
   return (
     <>
-      <div className="mb-5 flex w-min items-center gap-3 whitespace-nowrap rounded-md border border-strong bg-layer-1 px-2.5 py-1 text-11">
+      <div className="mb-5 flex w-min items-center gap-3 rounded-md border border-strong bg-layer-1 px-2.5 py-1 text-11 whitespace-nowrap">
         <ControlLink href={workItemLink} onClick={handleParentIssueClick}>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2.5">
@@ -93,7 +99,7 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
 
           <CustomMenu.MenuItem
             onClick={() => issueOperations.update(workspaceSlug, projectId, issueId, { parent_id: null })}
-            className="flex items-center gap-2 py-2 text-red-500"
+            className="flex items-center gap-2 py-2 text-danger-primary"
           >
             <MinusCircle className="h-4 w-4" />
             <span>{t("issue.remove.parent.label")}</span>

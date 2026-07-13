@@ -1,11 +1,17 @@
-import React, { useState } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { useState } from "react";
 import { observer } from "mobx-react";
 import Link from "next/link";
 
 import useSWR, { mutate } from "swr";
 import { CheckCircle2 } from "lucide-react";
 // plane imports
-import { ROLE, MEMBER_TRACKER_EVENTS, MEMBER_TRACKER_ELEMENTS, GROUP_WORKSPACE_TRACKER_EVENT } from "@plane/constants";
+import { ROLE } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 // types
 import { Button } from "@plane/propel/button";
@@ -18,17 +24,15 @@ import emptyInvitation from "@/app/assets/empty-state/invitation.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { WorkspaceLogo } from "@/components/workspace/logo";
-import { USER_WORKSPACES_LIST } from "@/constants/fetch-keys";
-// helpers
+import { USER_WORKSPACES_LIST } from "@plane/constants";
 // hooks
-import { captureError, captureSuccess, joinEventGroup } from "@/helpers/event-tracker.helper";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useAppRouter } from "@/hooks/use-app-router";
 // services
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 // plane web services
-import { WorkspaceService } from "@/plane-web/services";
+import { WorkspaceService } from "@/services/workspace.service";
 
 const workspaceService = new WorkspaceService();
 
@@ -77,20 +81,7 @@ function UserInvitationsPage() {
       .then(() => {
         mutate(USER_WORKSPACES_LIST);
         const firstInviteId = invitationsRespond[0];
-        const invitation = invitations?.find((i) => i.id === firstInviteId);
         const redirectWorkspace = invitations?.find((i) => i.id === firstInviteId)?.workspace;
-        if (redirectWorkspace?.id) {
-          joinEventGroup(GROUP_WORKSPACE_TRACKER_EVENT, redirectWorkspace?.id, {
-            date: new Date().toDateString(),
-            workspace_id: redirectWorkspace?.id,
-          });
-        }
-        captureSuccess({
-          eventName: MEMBER_TRACKER_EVENTS.accept,
-          payload: {
-            member_id: invitation?.id,
-          },
-        });
         updateUserProfile({ last_workspace_id: redirectWorkspace?.id })
           .then(() => {
             setIsJoiningWorkspaces(false);
@@ -107,14 +98,7 @@ function UserInvitationsPage() {
             setIsJoiningWorkspaces(false);
           });
       })
-      .catch((err) => {
-        captureError({
-          eventName: MEMBER_TRACKER_EVENTS.accept,
-          payload: {
-            member_id: invitationsRespond?.[0],
-          },
-          error: err,
-        });
+      .catch((_err) => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),
@@ -128,14 +112,14 @@ function UserInvitationsPage() {
     <AuthenticationWrapper>
       <div className="flex h-full flex-col gap-y-2 overflow-hidden sm:flex-row sm:gap-y-0">
         <div className="relative h-1/6 flex-shrink-0 sm:w-2/12 md:w-3/12 lg:w-1/5">
-          <div className="absolute left-0 top-1/2 h-[0.5px] w-full -translate-y-1/2 border-b-[0.5px] border-subtle sm:left-1/2 sm:top-0 sm:h-screen sm:w-[0.5px] sm:-translate-x-1/2 sm:translate-y-0 sm:border-r-[0.5px] md:left-1/3" />
+          <div className="absolute top-1/2 left-0 h-[0.5px] w-full -translate-y-1/2 border-b-[0.5px] border-subtle sm:top-0 sm:left-1/2 sm:h-screen sm:w-[0.5px] sm:-translate-x-1/2 sm:translate-y-0 sm:border-r-[0.5px] md:left-1/3" />
           <Link
             href="/"
-            className="absolute left-5 top-1/2 grid -translate-y-1/2 place-items-center px-3 sm:left-1/2 sm:top-12 sm:-translate-x-[15px] sm:translate-y-0 sm:px-0 sm:py-5 md:left-1/3 z-10"
+            className="absolute top-1/2 left-5 z-10 grid -translate-y-1/2 place-items-center px-3 sm:top-12 sm:left-1/2 sm:-translate-x-[15px] sm:translate-y-0 sm:px-0 sm:py-5 md:left-1/3"
           >
             <PlaneLogo className="h-9 w-auto text-primary" />
           </Link>
-          <div className="absolute right-4 top-1/4 -translate-y-1/2 text-13 text-primary sm:fixed sm:right-16 sm:top-12 sm:translate-y-0 sm:py-5">
+          <div className="absolute top-1/4 right-4 -translate-y-1/2 text-13 text-primary sm:fixed sm:top-12 sm:right-16 sm:translate-y-0 sm:py-5">
             {currentUser?.email}
           </div>
         </div>
@@ -183,7 +167,6 @@ function UserInvitationsPage() {
                     onClick={submitInvitations}
                     disabled={isJoiningWorkspaces || invitationsRespond.length === 0}
                     loading={isJoiningWorkspaces}
-                    data-ph-element={MEMBER_TRACKER_ELEMENTS.ACCEPT_INVITATION_BUTTON}
                   >
                     {t("accept_and_join")}
                   </Button>
@@ -198,7 +181,7 @@ function UserInvitationsPage() {
               </div>
             </div>
           ) : (
-            <div className="fixed left-0 top-0 grid h-full w-full place-items-center">
+            <div className="fixed top-0 left-0 grid h-full w-full place-items-center">
               <EmptyState
                 title={t("no_pending_invites")}
                 description={t("you_can_see_here_if_someone_invites_you_to_a_workspace")}

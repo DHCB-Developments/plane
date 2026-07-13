@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import * as React from "react";
 import type {
   ColumnDef,
@@ -15,10 +21,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+
 import { useTranslation } from "@plane/i18n";
 import { EmptyStateCompact } from "@plane/propel/empty-state";
-import { CloseIcon } from "@plane/propel/icons";
+import { SearchIcon, CloseIcon } from "@plane/propel/icons";
 // plane package imports
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@plane/propel/table";
 import { cn } from "@plane/utils";
@@ -32,10 +38,10 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTable<TData, TValue>({ columns, data, searchPlaceholder, actions }: DataTableProps<TData, TValue>) {
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [rowSelection, _setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, _setSorting] = React.useState<SortingState>([]);
   const { t } = useTranslation();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
@@ -61,9 +67,9 @@ export function DataTable<TData, TValue>({ columns, data, searchPlaceholder, act
   return (
     <div className="space-y-4">
       <div className="flex w-full items-center justify-between">
-        <div className="relative flex max-w-[300px] items-center gap-4 ">
+        <div className="relative flex max-w-[300px] items-center gap-4">
           {table.getHeaderGroups()?.[0]?.headers?.[0]?.id && (
-            <div className="flex items-center gap-2 whitespace-nowrap text-13 text-placeholder">
+            <div className="flex items-center gap-2 text-13 whitespace-nowrap text-placeholder">
               {searchPlaceholder}
             </div>
           )}
@@ -76,7 +82,7 @@ export function DataTable<TData, TValue>({ columns, data, searchPlaceholder, act
                 inputRef.current?.focus();
               }}
             >
-              <Search className="h-3.5 w-3.5" />
+              <SearchIcon className="h-3.5 w-3.5" />
             </button>
           )}
           <div
@@ -87,7 +93,7 @@ export function DataTable<TData, TValue>({ columns, data, searchPlaceholder, act
               }
             )}
           >
-            <Search className="h-3.5 w-3.5" />
+            <SearchIcon className="h-3.5 w-3.5" />
             <input
               ref={inputRef}
               className="w-full max-w-[234px] border-none bg-transparent text-13 text-primary placeholder:text-placeholder focus:outline-none"

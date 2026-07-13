@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import { usePopper } from "react-popper";
-import { Check, MoreVerticalIcon } from "lucide-react";
+import { MoreVerticalIcon } from "lucide-react";
 import { Popover, Transition } from "@headlessui/react";
 // hooks
 // ui
@@ -10,15 +16,14 @@ import { Popover, Transition } from "@headlessui/react";
 import type { TSupportedFilterTypeForUpdate } from "@plane/constants";
 import { EIssueFilterType } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
-import { ChevronUpIcon } from "@plane/propel/icons";
+import { CheckIcon, ChevronUpIcon } from "@plane/propel/icons";
 import type { TCalendarLayouts, TSupportedFilterForUpdate } from "@plane/types";
 import { ToggleSwitch } from "@plane/ui";
 // types
 // constants
-import { CALENDAR_LAYOUTS } from "@/constants/calendar";
+import { CALENDAR_LAYOUTS } from "@plane/constants";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
 import useSize from "@/hooks/use-window-size";
-import type { IProjectEpicsFilter } from "@/plane-web/store/issue/epic";
 import type { ICycleIssuesFilter } from "@/store/issue/cycle";
 import type { IModuleIssuesFilter } from "@/store/issue/module";
 import type { IProjectIssuesFilter } from "@/store/issue/project";
@@ -99,7 +104,7 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
           <Popover.Button as={React.Fragment}>
             <button type="button" ref={setReferenceElement}>
               <div
-                className={`hidden md:flex items-center gap-1.5 rounded-sm bg-layer-1 px-2.5 py-1 text-11 outline-none hover:bg-layer-1 ${
+                className={`hidden items-center gap-1.5 rounded-sm bg-layer-1 px-2.5 py-1 text-11 outline-none hover:bg-layer-1 md:flex ${
                   open ? "text-primary" : "text-secondary"
                 }`}
               >
@@ -140,7 +145,7 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
                       onClick={() => handleLayoutChange(layoutDetails.key, closePopover)}
                     >
                       {layoutDetails.title}
-                      {calendarLayout === layout && <Check size={12} strokeWidth={2} />}
+                      {calendarLayout === layout && <CheckIcon width={12} height={12} strokeWidth={2} />}
                     </button>
                   ))}
                   <button

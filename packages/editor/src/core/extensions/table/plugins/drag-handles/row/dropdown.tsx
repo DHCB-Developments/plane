@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { Editor } from "@tiptap/core";
 import { TableMap } from "@tiptap/pm/tables";
-import { ArrowDown, ArrowUp, Copy, ToggleRight, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ToggleRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 // extensions
 import type { ISvgIcons } from "@plane/propel/icons";
-import { CloseIcon } from "@plane/propel/icons";
+import { CopyIcon, TrashIcon, CloseIcon } from "@plane/propel/icons";
 import { findTable, getSelectedRows } from "@/extensions/table/table/utilities/helpers";
 // local imports
 import { duplicateRows } from "../actions";
@@ -31,7 +37,7 @@ const DROPDOWN_ITEMS: {
   {
     key: "duplicate",
     label: "Duplicate",
-    icon: Copy,
+    icon: CopyIcon,
     action: (editor) => {
       const table = findTable(editor.state.selection);
       if (!table) return;
@@ -52,7 +58,7 @@ const DROPDOWN_ITEMS: {
   {
     key: "delete",
     label: "Delete",
-    icon: Trash2,
+    icon: TrashIcon,
     action: (editor) => editor.chain().focus().deleteRow().run(),
   },
 ];
@@ -69,7 +75,7 @@ export function RowOptionsDropdown(props: Props) {
     <>
       <button
         type="button"
-        className="flex items-center justify-between gap-2 w-full rounded-sm px-1 py-1.5 text-11 text-left truncate text-secondary hover:bg-layer-1"
+        className="flex w-full items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-left text-11 text-secondary hover:bg-layer-1"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -78,7 +84,7 @@ export function RowOptionsDropdown(props: Props) {
         }}
       >
         <div className="flex-grow truncate">Header row</div>
-        <ToggleRight className="shrink-0 size-3" />
+        <ToggleRight className="size-3 shrink-0" />
       </button>
       <hr className="my-2 border-subtle" />
       <TableDragHandleDropdownColorSelector editor={editor} onSelect={onClose} />
@@ -86,7 +92,7 @@ export function RowOptionsDropdown(props: Props) {
         <button
           key={item.key}
           type="button"
-          className="flex items-center gap-2 w-full rounded-sm px-1 py-1.5 text-11 text-left truncate text-secondary hover:bg-layer-1"
+          className="flex w-full items-center gap-2 truncate rounded-sm px-1 py-1.5 text-left text-11 text-secondary hover:bg-layer-1"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -94,7 +100,7 @@ export function RowOptionsDropdown(props: Props) {
             onClose();
           }}
         >
-          <item.icon className="shrink-0 size-3" />
+          <item.icon className="size-3 shrink-0" />
           <div className="flex-grow truncate">{item.label}</div>
         </button>
       ))}

@@ -1,16 +1,22 @@
-import type { FC } from "react";
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import React from "react";
 import { observer } from "mobx-react";
-import { Plus } from "lucide-react";
-// plane imports
+
 import { useTranslation } from "@plane/i18n";
+import { PlusIcon } from "@plane/propel/icons";
+// plane imports
 import type { TIssueServiceType } from "@plane/types";
 import { CustomMenu } from "@plane/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // Plane-web
 import { useTimeLineRelationOptions } from "@/plane-web/components/relations";
-import type { TIssueRelationTypes } from "@/plane-web/types";
+import type { TIssueRelationTypes } from "@plane/types";
 
 type Props = {
   issueId: string;
@@ -34,7 +40,7 @@ export const RelationActionButton = observer(function RelationActionButton(props
   };
 
   // button element
-  const customButtonElement = customButton ? <>{customButton}</> : <Plus className="h-4 w-4" />;
+  const customButtonElement = customButton ? <>{customButton}</> : <PlusIcon className="h-4 w-4" />;
 
   return (
     <CustomMenu

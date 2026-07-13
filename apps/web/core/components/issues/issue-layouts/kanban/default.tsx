@@ -1,7 +1,11 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
-// i18n
-import { useTranslation } from "@plane/i18n";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
@@ -94,7 +98,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     isEpic = false,
   } = props;
   // i18n
-  const { t } = useTranslation();
   // store hooks
   const storeType = useIssueStoreType();
   const issueKanBanView = useKanbanView();
@@ -141,7 +144,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
   const isSubGroup = !!sub_group_id && sub_group_id !== "null";
 
   return (
-    <ContentWrapper className={`flex-row relative gap-4 !pt-2 !pb-0`}>
+    <ContentWrapper className={`relative flex-row gap-4 !pt-2 !pb-0`}>
       {list &&
         list.length > 0 &&
         list.map((subList: IGroupByColumn, groupIndex) => {
@@ -201,7 +204,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     />
                   }
                   defaultValue={groupIndex < 5 && subGroupIndex < 2}
-                  useIdletime
+                  useIdleTime
                 >
                   <KanbanGroup
                     groupId={subList.id}

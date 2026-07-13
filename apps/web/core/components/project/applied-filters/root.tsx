@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import { useTranslation } from "@plane/i18n";
 import { CloseIcon } from "@plane/propel/icons";
 // plane imports
@@ -92,7 +98,7 @@ export function ProjectAppliedFiltersList(props: Props) {
         {/* Applied display filters */}
         {appliedDisplayFilters.length > 0 && (
           <Tag key="project_display_filters">
-            <span className="text-11 text-tertiary">{t("projects.label", { count: 2 })}</span>
+            <span className="text-11 text-tertiary">{t("common.projects")}</span>
             <AppliedProjectDisplayFilters
               editable={isEditingAllowed}
               values={appliedDisplayFilters}
@@ -118,7 +124,7 @@ export function ProjectAppliedFiltersList(props: Props) {
             </p>
           }
         >
-          <span className="bg-layer-1 rounded-full text-13 font-medium py-1 px-2.5">
+          <span className="rounded-full bg-layer-1 px-2.5 py-1 text-13 font-medium">
             {filteredProjects}/{totalProjects}
           </span>
         </Tooltip>

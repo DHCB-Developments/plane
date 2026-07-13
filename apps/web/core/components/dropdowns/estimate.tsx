@@ -1,13 +1,18 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import { usePopper } from "react-popper";
-import { Check, Search } from "lucide-react";
 import { Combobox } from "@headlessui/react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
-import { EstimatePropertyIcon, ChevronDownIcon } from "@plane/propel/icons";
+import { CheckIcon, SearchIcon, EstimatePropertyIcon, ChevronDownIcon } from "@plane/propel/icons";
 import { EEstimateSystem } from "@plane/types";
 import { ComboDropDown } from "@plane/ui";
 import { convertMinutesToHoursMinutesString, cn } from "@plane/utils";
@@ -192,12 +197,16 @@ export const EstimateDropdown = observer(function EstimateDropdown(props: Props)
           >
             {!hideIcon && <EstimatePropertyIcon className="h-3 w-3 flex-shrink-0" />}
             {(selectedEstimate || placeholder) && BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-              <span className="flex-grow truncate">
-                {selectedEstimate
-                  ? currentActiveEstimate?.type === EEstimateSystem.TIME
-                    ? convertMinutesToHoursMinutesString(Number(selectedEstimate.value))
-                    : selectedEstimate.value
-                  : placeholder}
+              <span className="truncate">
+                {selectedEstimate ? (
+                  currentActiveEstimate?.type === EEstimateSystem.TIME ? (
+                    convertMinutesToHoursMinutesString(Number(selectedEstimate.value))
+                  ) : (
+                    selectedEstimate.value
+                  )
+                ) : (
+                  <span className="text-placeholder">{placeholder}</span>
+                )}
               </span>
             )}
             {dropdownArrow && (
@@ -231,7 +240,7 @@ export const EstimateDropdown = observer(function EstimateDropdown(props: Props)
             {...attributes.popper}
           >
             <div className="flex items-center gap-1.5 rounded-sm border border-subtle bg-surface-2 px-2">
-              <Search className="h-3.5 w-3.5 text-placeholder" strokeWidth={1.5} />
+              <SearchIcon className="h-3.5 w-3.5 text-placeholder" strokeWidth={1.5} />
               <Combobox.Input
                 as="input"
                 ref={inputRef}
@@ -246,10 +255,10 @@ export const EstimateDropdown = observer(function EstimateDropdown(props: Props)
             <div className="mt-2 max-h-48 space-y-1 overflow-y-scroll">
               {currentActiveEstimateId === undefined ? (
                 <div
-                  className={`flex w-full cursor-pointer select-none items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-secondary`}
+                  className={`flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none`}
                 >
                   {/* NOTE: This condition renders when estimates are not enabled for the project */}
-                  <div className="flex-grow flex items-center gap-2">
+                  <div className="flex flex-grow items-center gap-2">
                     <EstimatePropertyIcon className="h-3 w-3 flex-shrink-0" />
                     <span className="flex-grow truncate">{t("project_settings.estimates.no_estimate")}</span>
                   </div>
@@ -263,7 +272,7 @@ export const EstimateDropdown = observer(function EstimateDropdown(props: Props)
                           {({ active, selected }) => (
                             <div
                               className={cn(
-                                "flex w-full cursor-pointer select-none items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5",
+                                "flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none",
                                 {
                                   "bg-layer-transparent-hover": active,
                                   "text-primary": selected,
@@ -272,16 +281,16 @@ export const EstimateDropdown = observer(function EstimateDropdown(props: Props)
                               )}
                             >
                               <span className="flex-grow truncate">{option.content}</span>
-                              {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                              {selected && <CheckIcon className="h-3.5 w-3.5 flex-shrink-0" />}
                             </div>
                           )}
                         </Combobox.Option>
                       ))
                     ) : (
-                      <p className="px-1.5 py-1 italic text-placeholder">{t("common.search.no_matching_results")}</p>
+                      <p className="px-1.5 py-1 text-placeholder italic">{t("common.search.no_matching_results")}</p>
                     )
                   ) : (
-                    <p className="px-1.5 py-1 italic text-placeholder">{t("common.loading")}</p>
+                    <p className="px-1.5 py-1 text-placeholder italic">{t("common.loading")}</p>
                   )}
                 </>
               )}
