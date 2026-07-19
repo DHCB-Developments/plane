@@ -104,23 +104,27 @@ export const WorkItemTypeItem = observer(function WorkItemTypeItem(props: Props)
               <ToggleSwitch value={issueType.is_active} onChange={handleToggleActive} disabled={issueType.is_default} />
             </div>
           </Tooltip>
-          {!issueType.is_default && (
-            <CustomMenu placement="bottom-end" ellipsis>
-              <CustomMenu.MenuItem onClick={() => setIsEditOpen(true)}>
-                <span className="flex items-center gap-2">
-                  <Pencil className="size-3.5" /> {t("common.edit")}
-                </span>
-              </CustomMenu.MenuItem>
+          <CustomMenu placement="bottom-end" ellipsis>
+            {/* Edit (name/description/icon) is allowed for every type, including the default. */}
+            <CustomMenu.MenuItem onClick={() => setIsEditOpen(true)}>
+              <span className="flex items-center gap-2">
+                <Pencil className="size-3.5" /> {t("common.edit")}
+              </span>
+            </CustomMenu.MenuItem>
+            {/* Set-as-default and delete never apply to the current default type. */}
+            {!issueType.is_default && (
               <CustomMenu.MenuItem onClick={handleSetDefault} disabled={!issueType.is_active}>
                 <span className="flex items-center gap-2">{t("work_item_types.settings.set_as_default")}</span>
               </CustomMenu.MenuItem>
+            )}
+            {!issueType.is_default && (
               <CustomMenu.MenuItem onClick={() => setIsDeleteOpen(true)}>
                 <span className="flex items-center gap-2 text-danger-secondary">
                   <Trash2 className="size-3.5" /> {t("common.delete")}
                 </span>
               </CustomMenu.MenuItem>
-            </CustomMenu>
-          )}
+            )}
+          </CustomMenu>
         </div>
         {isExpanded && (
           <div className="border-t border-subtle px-4 py-3">
