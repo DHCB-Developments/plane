@@ -39,6 +39,8 @@ type Props = {
   isIntakeAccepted: boolean;
 };
 
+import { WorkItemAdditionalSidebarProperties } from "@/plane-web/components/issues/issue-details/additional-properties";
+
 export const InboxIssueContentProperties = observer(function InboxIssueContentProperties(props: Props) {
   const { workspaceSlug, projectId, issue, issueOperations, isEditable, duplicateIssueDetails, isIntakeAccepted } =
     props;
@@ -210,6 +212,16 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
           </div>
         </div>
       </div>
+      {issue?.id && (
+        <WorkItemAdditionalSidebarProperties
+          workItemId={issue.id}
+          workItemTypeId={issue.type_id ?? null}
+          projectId={projectId?.toString() ?? ""}
+          workspaceSlug={workspaceSlug?.toString() ?? ""}
+          isEditable={isEditable}
+          isPeekView
+        />
+      )}
     </div>
   );
 });

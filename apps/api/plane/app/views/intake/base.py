@@ -6,6 +6,7 @@
 import json
 
 # Django import
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q, Count, OuterRef, Func, F, Prefetch, Subquery
 from django.core.serializers.json import DjangoJSONEncoder
@@ -52,6 +53,7 @@ from plane.utils.timezone_converter import user_timezone_converter
 from plane.utils.global_paginator import paginate
 from plane.utils.host import base_host
 from plane.db.models.intake import SourceType
+from plane.app.views.issue_type.property import set_issue_property_values, missing_required_property_values
 
 
 class IntakeViewSet(BaseViewSet):
@@ -256,6 +258,18 @@ class IntakeIssueViewSet(BaseViewSet):
             )
         request.data["issue"]["state_id"] = triage_state.id
 
+        # Server-side mandatory custom-property enforcement (before the issue is created,
+        # so it applies to every caller — UI, guests, and direct API alike).
+        missing_properties = missing_required_property_values(
+            request.data.get("issue", {}).get("type_id"),
+            request.data.get("issue_property_values", {}),
+        )
+        if missing_properties:
+            return Response(
+                {"error": "Missing required properties: " + ", ".join(missing_properties)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # create an issue
         serializer = IssueCreateSerializer(
             data=request.data.get("issue"),
@@ -276,6 +290,13 @@ class IntakeIssueViewSet(BaseViewSet):
                 issue_id=serializer.data["id"],
                 source=SourceType.IN_APP,
             )
+            # Write any custom property values for the selected work item type. Done
+            # inline (not the values endpoint) so it works for every intake creator
+            # including guests, and stays in the create request.
+            with transaction.atomic():
+                set_issue_property_values(
+                    serializer.instance, request.data.get("issue_property_values", {}), request.user
+                )
             # Create an Issue Activity
             issue_activity.delay(
                 type="issue.activity.created",

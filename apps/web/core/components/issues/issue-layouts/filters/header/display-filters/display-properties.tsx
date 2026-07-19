@@ -6,12 +6,15 @@
 
 import React from "react";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
 // plane constants
 import { ISSUE_DISPLAY_PROPERTIES } from "@plane/constants";
 // plane i18n
 import { useTranslation } from "@plane/i18n";
 // types
 import type { IIssueDisplayProperties } from "@plane/types";
+// hooks
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 // components
 import { FilterHeader } from "../helpers/filter-header";
 
@@ -35,6 +38,10 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
   } = props;
   // hooks
   const { t } = useTranslation();
+  const { projectId } = useParams();
+  const { isWorkItemTypeEnabledForProject } = useIssueTypes();
+  // derived values
+  const isWorkItemTypeEnabled = isWorkItemTypeEnabledForProject(projectId?.toString());
   // states
   const [previewEnabled, setPreviewEnabled] = React.useState(true);
 
@@ -47,6 +54,9 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
         return !cycleViewDisabled;
       case "modules":
         return !moduleViewDisabled;
+      case "issue_type":
+        // Only offer the work item type toggle where the feature is enabled.
+        return isWorkItemTypeEnabled;
       default:
         return true;
     }
