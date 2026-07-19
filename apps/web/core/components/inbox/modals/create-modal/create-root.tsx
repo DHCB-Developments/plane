@@ -13,10 +13,11 @@ import type { EditorRefApi } from "@plane/editor";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TIssue } from "@plane/types";
+import type { TIssue, TIssuePropertyValues } from "@plane/types";
 import { ToggleSwitch } from "@plane/ui";
 import { renderFormattedPayloadDate, getTabIndex } from "@plane/utils";
 // hooks
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -73,11 +74,14 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id;
   const { isMobile } = usePlatformOS();
   const { getProjectById } = useProject();
+  const { getPropertiesByTypeId, getProjectDefaultIssueTypeId } = useIssueTypes();
   const { t } = useTranslation();
   // states
   const [createMore, setCreateMore] = useState<boolean>(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<TIssue>>(defaultIssueData);
+  const [issuePropertyValues, setIssuePropertyValues] = useState<TIssuePropertyValues>({});
+  const [issuePropertyValueErrors, setIssuePropertyValueErrors] = useState<Record<string, string>>({});
   const handleFormData = useCallback(
     <T extends keyof Partial<TIssue>>(issueKey: T, issueValue: Partial<TIssue>[T]) => {
       setFormData({
@@ -103,6 +107,32 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       description_html: formData?.description_html,
     }
   );
+
+  // preselect the project's default work item type
+  useEffect(() => {
+    if (formData.type_id) return;
+    const defaultTypeId = getProjectDefaultIssueTypeId(projectId);
+    if (defaultTypeId) setFormData((prev) => ({ ...prev, type_id: defaultTypeId }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // Enforce mandatory custom properties before submit (parity with the shared work item modal).
+  const validateRequiredProperties = () => {
+    const typeId = formData.type_id;
+    if (!typeId) return true;
+    const requiredProperties = getPropertiesByTypeId(typeId).filter((p) => p.is_active && p.is_required);
+    const errors: Record<string, string> = {};
+    let isValid = true;
+    for (const property of requiredProperties) {
+      const values = issuePropertyValues[property.id];
+      if (!values || values.length === 0 || (values.length === 1 && !values[0])) {
+        errors[property.id] = "This field is required";
+        isValid = false;
+      }
+    }
+    setIssuePropertyValueErrors(errors);
+    return isValid;
+  };
 
   const handleEscKeyDown = (event: KeyboardEvent) => {
     if (descriptionEditorRef.current?.isEditorReadyToDiscard()) {
@@ -148,6 +178,15 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       return;
     }
 
+    if (!validateRequiredProperties()) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: "Please fill all mandatory properties before submitting.",
+      });
+      return;
+    }
+
     const payload: Partial<TIssue> = {
       name: formData.name || "",
       description_html: formData.description_html || "<p></p>",
@@ -156,10 +195,11 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       label_ids: formData.label_ids || [],
       assignee_ids: formData.assignee_ids || [],
       target_date: formData.target_date || null,
+      type_id: formData.type_id || null,
     };
     setFormSubmitting(true);
 
-    await createInboxIssue(workspaceSlug, projectId, payload)
+    await createInboxIssue(workspaceSlug, projectId, payload, issuePropertyValues)
       .then(async (res) => {
         if (uploadedAssetIds.length > 0) {
           await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, projectId, res?.issue.id ?? "", {
@@ -172,7 +212,9 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
           handleModalClose();
         } else {
           descriptionEditorRef?.current?.clearEditor();
-          setFormData(defaultIssueData);
+          setFormData({ ...defaultIssueData, type_id: getProjectDefaultIssueTypeId(projectId) ?? undefined });
+          setIssuePropertyValues({});
+          setIssuePropertyValueErrors({});
         }
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -229,7 +271,14 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
                 onEnterKeyPress={() => submitBtnRef?.current?.click()}
                 onAssetUpload={(assetId) => setUploadedAssetIds((prev) => [...prev, assetId])}
               />
-              <InboxIssueProperties projectId={projectId} data={formData} handleData={handleFormData} />
+              <InboxIssueProperties
+                projectId={projectId}
+                data={formData}
+                handleData={handleFormData}
+                issuePropertyValues={issuePropertyValues}
+                setIssuePropertyValues={setIssuePropertyValues}
+                issuePropertyValueErrors={issuePropertyValueErrors}
+              />
             </div>
           </div>
           <div className="flex items-center justify-between gap-2 rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-5 py-4">

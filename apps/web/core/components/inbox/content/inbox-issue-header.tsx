@@ -38,6 +38,7 @@ import { useAppRouter } from "@/hooks/use-app-router";
 // store
 import type { IInboxIssueStore } from "@/store/inbox/inbox-issue.store";
 // local imports
+import { IssueIdentifier } from "@/plane-web/components/issues/issue-details/issue-identifier";
 import { InboxIssueStatus } from "../inbox-issue-status";
 import { DeclineIssueModal } from "../modals/decline-issue-modal";
 import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
@@ -294,9 +295,13 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
             </button>
           )}
           {issue?.project_id && issue.sequence_id && (
-            <h3 className="flex-shrink-0 text-14 font-medium text-tertiary">
-              {getProjectById(issue.project_id)?.identifier}-{issue.sequence_id}
-            </h3>
+            <IssueIdentifier
+              projectId={issue.project_id}
+              projectIdentifier={getProjectById(issue.project_id)?.identifier ?? ""}
+              issueSequenceId={issue.sequence_id}
+              issueTypeId={issue.type_id}
+              size="md"
+            />
           )}
           <InboxIssueStatus inboxIssue={inboxIssue} iconSize={12} />
           <div className="flex w-full items-center justify-end">

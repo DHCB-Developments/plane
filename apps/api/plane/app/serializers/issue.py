@@ -38,6 +38,8 @@ from plane.db.models import (
     IssueVote,
     IssueRelation,
     State,
+    IssueType,
+    ProjectIssueType,
     IssueVersion,
     IssueDescriptionVersion,
     ProjectMember,
@@ -86,6 +88,9 @@ class IssueCreateSerializer(BaseSerializer):
     )
     parent_id = serializers.PrimaryKeyRelatedField(
         source="parent", queryset=Issue.objects.all(), required=False, allow_null=True
+    )
+    type_id = serializers.PrimaryKeyRelatedField(
+        source="type", queryset=IssueType.objects.all(), required=False, allow_null=True
     )
     label_ids = serializers.ListField(
         child=serializers.PrimaryKeyRelatedField(queryset=Label.objects.all()),
@@ -184,6 +189,17 @@ class IssueCreateSerializer(BaseSerializer):
             ).exists()
         ):
             raise serializers.ValidationError("Parent is not valid issue_id please pass a valid issue_id")
+
+        # Check work item type is mapped to this project
+        if (
+            attrs.get("type")
+            and not ProjectIssueType.objects.filter(
+                project_id=self.context.get("project_id"),
+                issue_type_id=attrs.get("type").id,
+                deleted_at__isnull=True,
+            ).exists()
+        ):
+            raise serializers.ValidationError("Work item type is not valid for this project")
 
         if (
             attrs.get("estimate_point")
@@ -763,6 +779,7 @@ class IssueIntakeSerializer(DynamicBaseSerializer):
             "created_at",
             "label_ids",
             "created_by",
+            "type_id",
         ]
         read_only_fields = fields
 
@@ -809,6 +826,7 @@ class IssueSerializer(DynamicBaseSerializer):
             "link_count",
             "is_draft",
             "archived_at",
+            "type_id",
         ]
         read_only_fields = fields
 

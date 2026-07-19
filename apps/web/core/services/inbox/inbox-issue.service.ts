@@ -6,7 +6,7 @@
 
 // plane imports
 import { API_BASE_URL } from "@plane/constants";
-import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@plane/types";
+import type { TInboxIssue, TIssue, TInboxIssueWithPagination, TIssuePropertyValues } from "@plane/types";
 import { EInboxIssueSource } from "@plane/types";
 // helpers
 // services
@@ -37,10 +37,16 @@ export class InboxIssueService extends APIService {
       });
   }
 
-  async create(workspaceSlug: string, projectId: string, data: Partial<TIssue>): Promise<TInboxIssue> {
+  async create(
+    workspaceSlug: string,
+    projectId: string,
+    data: Partial<TIssue>,
+    issuePropertyValues?: TIssuePropertyValues
+  ): Promise<TInboxIssue> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/`, {
       source: EInboxIssueSource.IN_APP,
       issue: data,
+      issue_property_values: issuePropertyValues ?? {},
     })
       .then((response) => response?.data)
       .catch((error) => {

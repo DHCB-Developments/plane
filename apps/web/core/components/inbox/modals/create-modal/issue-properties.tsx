@@ -6,10 +6,13 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
+import { useParams } from "next/navigation";
+import useSWR from "swr";
 import { ETabIndices } from "@plane/constants";
+import { Logo } from "@plane/propel/emoji-icon-picker";
 import { ParentPropertyIcon } from "@plane/propel/icons";
-import type { ISearchIssueResponse, TIssue } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+import type { ISearchIssueResponse, TIssue, TIssuePropertyValues } from "@plane/types";
+import { CustomMenu, CustomSearchSelect } from "@plane/ui";
 import { renderFormattedPayloadDate, getDate, getTabIndex } from "@plane/utils";
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
@@ -24,20 +27,73 @@ import { IssueLabelSelect } from "@/components/issues/select";
 // helpers
 // hooks
 import { useProjectEstimates } from "@/hooks/store/estimates";
+import { useIssueTypes } from "@/hooks/store/use-issue-types";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// plane web
+import { getPropertyTypeMeta } from "@/plane-web/components/issue-types/property-type-options";
+import { toTint } from "@/plane-web/components/issues/issue-details/issue-identifier";
+import { PropertyValueInput } from "@/plane-web/components/issues/issue-details/property-value-input";
 
 type TInboxIssueProperties = {
   projectId: string;
   data: Partial<TIssue>;
   handleData: (issueKey: keyof Partial<TIssue>, issueValue: Partial<TIssue>[keyof Partial<TIssue>]) => void;
+  issuePropertyValues?: TIssuePropertyValues;
+  setIssuePropertyValues?: React.Dispatch<React.SetStateAction<TIssuePropertyValues>>;
+  issuePropertyValueErrors?: Record<string, string>;
   isVisible?: boolean;
 };
 
 export const InboxIssueProperties = observer(function InboxIssueProperties(props: TInboxIssueProperties) {
-  const { projectId, data, handleData, isVisible = false } = props;
+  const {
+    projectId,
+    data,
+    handleData,
+    issuePropertyValues = {},
+    setIssuePropertyValues,
+    issuePropertyValueErrors = {},
+    isVisible = false,
+  } = props;
+  const workspaceSlug = useParams().workspaceSlug?.toString() ?? "";
   // hooks
   const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const { isMobile } = usePlatformOS();
+  const {
+    getProjectIssueTypes,
+    getIssueTypeById,
+    getPropertiesByTypeId,
+    isWorkItemTypeEnabledForProject,
+    fetchProjectIssueTypes,
+    fetchIssueProperties,
+  } = useIssueTypes();
+
+  const typeId = data?.type_id ?? undefined;
+  const isTypeEnabled = isWorkItemTypeEnabledForProject(projectId);
+  const workItemTypes = (getProjectIssueTypes(projectId) ?? []).filter((type) => type.is_active && !type.is_epic);
+  const currentType = getIssueTypeById(typeId);
+  const activeProperties = typeId ? getPropertiesByTypeId(typeId).filter((prop) => prop.is_active) : [];
+
+  useSWR(
+    workspaceSlug && projectId ? `PROJECT_ISSUE_TYPES_${projectId}` : null,
+    workspaceSlug && projectId ? () => fetchProjectIssueTypes(workspaceSlug, projectId) : null,
+    { revalidateOnFocus: false }
+  );
+  useSWR(
+    workspaceSlug && projectId && typeId ? `ISSUE_TYPE_PROPERTIES_${typeId}` : null,
+    workspaceSlug && projectId && typeId ? () => fetchIssueProperties(workspaceSlug, projectId, typeId) : null,
+    { revalidateOnFocus: false }
+  );
+
+  const typeOptions = workItemTypes.map((type) => ({
+    value: type.id,
+    query: type.name,
+    content: (
+      <span className="flex items-center gap-2">
+        <Logo logo={type.logo_props} size={14} type="lucide" /> {type.name}
+      </span>
+    ),
+  }));
+  const currentTypeColor = currentType?.logo_props?.in_use === "icon" ? currentType.logo_props.icon?.color : undefined;
   // states
   const [parentIssueModalOpen, setParentIssueModalOpen] = useState(false);
   const [selectedParentIssue, setSelectedParentIssue] = useState<ISearchIssueResponse | undefined>(undefined);
@@ -54,7 +110,29 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
   maxDate?.setDate(maxDate.getDate());
 
   return (
-    <div className="relative flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="relative flex flex-wrap items-center gap-2">
+        {/* work item type */}
+        {isTypeEnabled && workItemTypes.length > 0 && (
+          <div className="h-7">
+            <CustomSearchSelect
+              value={typeId}
+              options={typeOptions}
+              onChange={(val: string) => handleData("type_id", val)}
+              noChevron
+              customButton={
+                <span
+                  className="flex h-7 items-center gap-1 rounded border border-strong px-2 text-11 font-medium"
+                  style={{ backgroundColor: toTint(currentTypeColor, 0.25), color: currentTypeColor }}
+                >
+                  {currentType?.logo_props?.in_use ? <Logo logo={currentType.logo_props} size={12} type="lucide" /> : null}
+                  <span>{currentType?.name ?? "Type"}</span>
+                </span>
+              }
+            />
+          </div>
+        )}
+
       {/* intake state */}
       <div className="h-7">
         <IntakeStateDropdown
@@ -230,6 +308,36 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
             projectId={projectId}
             issueId={undefined}
           />
+        </div>
+      )}
+      </div>
+
+      {isTypeEnabled && activeProperties.length > 0 && setIssuePropertyValues && (
+        <div className="flex flex-col gap-2.5 rounded-md border border-subtle p-3">
+          {activeProperties.map((property) => {
+            const Icon = getPropertyTypeMeta(property.property_type)?.icon;
+            const error = issuePropertyValueErrors[property.id];
+            return (
+              <div key={property.id} className="flex items-start gap-2">
+                <div className="flex w-2/5 flex-shrink-0 items-center gap-1.5 pt-1.5 text-13 text-tertiary">
+                  {Icon && <Icon className="size-3.5 flex-shrink-0" />}
+                  <span className="truncate">{property.display_name}</span>
+                  {property.is_required && <span className="text-danger-secondary">*</span>}
+                </div>
+                <div className="w-3/5">
+                  <PropertyValueInput
+                    property={property}
+                    values={issuePropertyValues[property.id] ?? []}
+                    onChange={(values) =>
+                      setIssuePropertyValues((prev) => ({ ...prev, [property.id]: values }))
+                    }
+                    projectId={projectId}
+                  />
+                  {error ? <span className="mt-1 block text-11 text-danger-secondary">{error}</span> : null}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
