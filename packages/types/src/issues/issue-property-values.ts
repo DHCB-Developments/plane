@@ -4,5 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export type TIssuePropertyValues = Record<string, unknown>;
+// property_id -> list of values (option ids, uuids, iso dates, decimals-as-string, text)
+export type TIssuePropertyValues = Record<string, string[]>;
 export type TIssuePropertyValueErrors = Record<string, unknown>;

@@ -6,6 +6,8 @@
 
 // issues
 export * from "./issue";
+export * from "./issue-type";
+export * from "./issue-property";
 export * from "./issue_reaction";
 export * from "./issue_link";
 export * from "./issue_attachment";
