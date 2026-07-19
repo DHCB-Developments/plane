@@ -16,6 +16,7 @@ import type {
   TInboxIssueSorting,
   TInboxIssuePaginationInfo,
   TInboxIssueSortingOrderByQueryParam,
+  TIssuePropertyValues,
 } from "@plane/types";
 import { EInboxIssueCurrentTab, EInboxIssueStatus } from "@plane/types";
 import { getCustomDates } from "@plane/utils";
@@ -77,7 +78,8 @@ export interface IProjectInboxStore {
   createInboxIssue: (
     workspaceSlug: string,
     projectId: string,
-    data: Partial<TInboxIssue>
+    data: Partial<TInboxIssue>,
+    issuePropertyValues?: TIssuePropertyValues
   ) => Promise<TInboxIssue | undefined>;
   deleteInboxIssue: (workspaceSlug: string, projectId: string, inboxIssueId: string) => Promise<void>;
 }
@@ -457,9 +459,19 @@ export class ProjectInboxStore implements IProjectInboxStore {
    * @param projectId
    * @param data
    */
-  createInboxIssue = async (workspaceSlug: string, projectId: string, data: Partial<TInboxIssue>) => {
+  createInboxIssue = async (
+    workspaceSlug: string,
+    projectId: string,
+    data: Partial<TInboxIssue>,
+    issuePropertyValues?: TIssuePropertyValues
+  ) => {
     try {
-      const inboxIssueResponse = await this.inboxIssueService.create(workspaceSlug, projectId, data);
+      const inboxIssueResponse = await this.inboxIssueService.create(
+        workspaceSlug,
+        projectId,
+        data,
+        issuePropertyValues
+      );
       if (inboxIssueResponse)
         runInAction(() => {
           update(this, ["inboxIssueIds"], (ids) => [...ids, inboxIssueResponse?.issue?.id]);

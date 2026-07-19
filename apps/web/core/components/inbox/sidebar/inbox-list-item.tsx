@@ -14,6 +14,7 @@ import { Tooltip } from "@plane/propel/tooltip";
 import { Row, Avatar } from "@plane/ui";
 import { cn, renderFormattedDate, getFileURL } from "@plane/utils";
 // components
+import { IssueTypeIdentifier } from "@/plane-web/components/issues/issue-details/issue-identifier";
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
@@ -71,8 +72,11 @@ export const InboxIssueListItem = observer(function InboxIssueListItem(props: In
         >
           <div className="space-y-1">
             <div className="relative flex items-center justify-between gap-2">
-              <div className="flex-shrink-0 text-11 font-medium text-tertiary">
-                {projectIdentifier}-{issue.sequence_id}
+              <div className="flex flex-shrink-0 items-center gap-1.5 text-11 font-medium text-tertiary">
+                {issue.type_id && <IssueTypeIdentifier issueTypeId={issue.type_id} size="xs" />}
+                <span>
+                  {projectIdentifier}-{issue.sequence_id}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 {inboxIssue.source && <InboxSourcePill source={inboxIssue.source} />}
