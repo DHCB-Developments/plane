@@ -53,3 +53,19 @@ class ProjectIssueType(ProjectBaseModel):
 
     def __str__(self):
         return f"{self.project} - {self.issue_type}"
+
+
+# Types seeded into a project when Work Item Types are enabled.
+# v1: only the default "Work Item" type. Epic is intentionally NOT seeded to
+# avoid changing the global IssueManager (epics would otherwise leak into every
+# list/board/cycle/analytics query, since IssueManager has no epic exclusion).
+DEFAULT_ISSUE_TYPES = [
+    {
+        "name": "Work Item",
+        "description": "A default work item type.",
+        "logo_props": {},
+        "is_epic": False,
+        "is_default": True,
+        "level": 0,
+    }
+]

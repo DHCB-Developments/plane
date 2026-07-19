@@ -102,6 +102,8 @@ class ProjectCreateSerializer(BaseSerializer):
             "created_by",
             "updated_by",
             "logo_props",
+            # Irreversible; only settable via the issue-types enable endpoint.
+            "is_issue_type_enabled",
         ]
 
     def validate(self, data):
@@ -236,6 +238,8 @@ class ProjectSerializer(BaseSerializer):
             "updated_by",
             "deleted_at",
             "cover_image_url",
+            # Irreversible; only settable via the issue-types enable endpoint.
+            "is_issue_type_enabled",
         ]
 
     def validate(self, data):

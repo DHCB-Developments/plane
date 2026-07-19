@@ -34,7 +34,11 @@ class ProjectSerializer(BaseSerializer):
     class Meta:
         model = Project
         fields = "__all__"
-        read_only_fields = ["workspace", "deleted_at"]
+        # is_issue_type_enabled is irreversible and must only be set through the
+        # dedicated issue-types enable endpoint (which also seeds default types).
+        # Keeping it read-only here prevents a plain PATCH from stranding a
+        # project as "enabled" with zero types.
+        read_only_fields = ["workspace", "deleted_at", "is_issue_type_enabled"]
 
     def validate_name(self, name):
         project_id = self.instance.id if self.instance else None
