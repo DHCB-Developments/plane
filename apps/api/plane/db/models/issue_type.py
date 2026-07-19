@@ -63,7 +63,7 @@ DEFAULT_ISSUE_TYPES = [
     {
         "name": "Work Item",
         "description": "A default work item type.",
-        "logo_props": {},
+        "logo_props": {"in_use": "icon", "icon": {"name": "Layers", "color": "#6c7ae0", "background_color": "#6c7ae0"}},
         "is_epic": False,
         "is_default": True,
         "level": 0,
