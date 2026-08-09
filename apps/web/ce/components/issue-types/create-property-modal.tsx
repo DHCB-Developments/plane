@@ -42,6 +42,7 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
   const [dateFormat, setDateFormat] = useState(DATE_FORMATS[0].key);
   const [numberDefault, setNumberDefault] = useState("");
   const [options, setOptions] = useState<{ id?: string; name: string }[]>([]);
+  const [isProjectScoped, setIsProjectScoped] = useState(false);
   const [optionInput, setOptionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,6 +58,7 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
     setDateFormat((existing?.settings?.display_format as string) ?? DATE_FORMATS[0].key);
     setNumberDefault(existing?.default_value?.[0] ?? "");
     setOptions((existing?.options ?? []).map((o) => ({ id: o.id, name: o.name })));
+    setIsProjectScoped(!!existing?.project);
     setOptionInput("");
   }, [isOpen, propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -104,6 +106,7 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
       settings,
       default_value: defaultValue,
       ...(isDropdown ? { options } : {}),
+      ...(propertyId ? {} : { is_project_scoped: isProjectScoped }),
     };
 
     setIsSubmitting(true);
@@ -303,6 +306,15 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
           <label className="flex items-center gap-2 text-13">
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             Active
+          </label>
+          <label className={`flex items-center gap-2 text-13 ${propertyId ? "opacity-50" : ""}`}>
+            <input
+              type="checkbox"
+              checked={isProjectScoped}
+              disabled={!!propertyId}
+              onChange={(e) => setIsProjectScoped(e.target.checked)}
+            />
+            Only this project
           </label>
         </div>
         <div className="flex items-center gap-2">

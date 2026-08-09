@@ -263,6 +263,7 @@ class IntakeIssueViewSet(BaseViewSet):
         missing_properties = missing_required_property_values(
             request.data.get("issue", {}).get("type_id"),
             request.data.get("issue_property_values", {}),
+            project_id=project_id,
         )
         if missing_properties:
             return Response(

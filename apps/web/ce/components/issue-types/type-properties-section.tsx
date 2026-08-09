@@ -57,7 +57,7 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
         </div>
         {usageCount > 1 && (
           <p className="text-11 text-tertiary">
-            Shared type — property changes here apply in all {usageCount} projects using it.
+            Shared type — changes to shared properties apply in all {usageCount} projects using it; “Only this project” properties stay here.
           </p>
         )}
         {properties.map((property) => (

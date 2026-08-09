@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from ..base import BaseViewSet
 from plane.app.serializers import IssueTypeSerializer, IssueTypeAvailableSerializer
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import IssueType, ProjectIssueType, Project, Issue
+from plane.db.models import IssueType, ProjectIssueType, Project, Issue, IssueProperty
 from plane.db.models.issue_type import DEFAULT_ISSUE_TYPES
 
 
@@ -193,6 +193,9 @@ class IssueTypeViewSet(BaseViewSet):
             # changed individually (Issue.type is SET_NULL, so removing the type
             # nulls the FK — it never deletes work items).
             project_issue_type.delete()
+            # This project's own (project-scoped) properties on the type go with it.
+            for local_property in IssueProperty.objects.filter(issue_type_id=pk, project_id=project_id):
+                local_property.delete()
             if not ProjectIssueType.objects.filter(issue_type_id=pk).exists():
                 IssueType.objects.filter(pk=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
