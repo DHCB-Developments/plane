@@ -70,10 +70,11 @@ export const WorkItemTypesTab = observer(function WorkItemTypesTab(props: Props)
             </div>
             <CustomMenu
               placement="bottom-end"
+              customButtonClassName="flex-shrink-0"
               customButton={
-                <span className="flex h-8 items-center gap-1.5 rounded-md bg-accent-primary px-3 text-13 font-medium text-on-color hover:bg-accent-primary-hover">
+                <span className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-primary px-3 py-1.5 text-13 font-medium leading-4 text-on-color hover:bg-accent-primary-hover">
                   {t("work_item_types.create.button")}
-                  <ChevronDown className="size-3.5" />
+                  <ChevronDown className="size-3.5 flex-shrink-0" />
                 </span>
               }
             >
