@@ -7,6 +7,7 @@
 import { API_BASE_URL } from "@plane/constants";
 import type {
   IIssueType,
+  IIssueTypeAvailable,
   IIssueProperty,
   TIssueTypePayload,
   TIssuePropertyPayload,
@@ -73,6 +74,23 @@ export class IssueTypeService extends APIService {
     return this.post(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-types/${issueTypeId}/mark-default/`
     )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+
+  async getAvailableIssueTypes(workspaceSlug: string, projectId: string): Promise<IIssueTypeAvailable[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-types/available/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async importIssueType(workspaceSlug: string, projectId: string, issueTypeId: string): Promise<IIssueType> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-types/${issueTypeId}/import/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

@@ -90,6 +90,11 @@ export const WorkItemTypeItem = observer(function WorkItemTypeItem(props: Props)
                   {t("common.default")}
                 </span>
               )}
+              {(issueType.usage_count ?? 0) > 1 && (
+                <span className="rounded border border-subtle px-1.5 py-0.5 text-11 text-tertiary">
+                  Used in {issueType.usage_count} projects
+                </span>
+              )}
             </div>
             {issueType.description && (
               <span className="truncate text-13 text-tertiary">{issueType.description}</span>
@@ -120,7 +125,8 @@ export const WorkItemTypeItem = observer(function WorkItemTypeItem(props: Props)
             {!issueType.is_default && (
               <CustomMenu.MenuItem onClick={() => setIsDeleteOpen(true)}>
                 <span className="flex items-center gap-2 text-danger-secondary">
-                  <Trash2 className="size-3.5" /> {t("common.delete")}
+                  <Trash2 className="size-3.5" />{" "}
+                  {(issueType.usage_count ?? 0) > 1 ? "Remove from project" : t("common.delete")}
                 </span>
               </CustomMenu.MenuItem>
             )}

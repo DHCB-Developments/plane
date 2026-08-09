@@ -36,6 +36,10 @@ class ProjectIssueType(ProjectBaseModel):
     issue_type = models.ForeignKey("db.IssueType", related_name="project_issue_types", on_delete=models.CASCADE)
     level = models.PositiveIntegerField(default=0)
     is_default = models.BooleanField(default=False)
+    # Per-project activation: a shared (workspace) type can be active in one
+    # project and disabled in another. IssueType.is_active stays as a
+    # workspace-level retire flag and is no longer used for project gating.
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ["project", "issue_type", "deleted_at"]
