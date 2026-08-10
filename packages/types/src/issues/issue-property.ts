@@ -35,6 +35,8 @@ export interface IIssueProperty {
   settings: Record<string, unknown>;
   sort_order: number;
   issue_type: string;
+  /** null = shared across all projects using the type; set = only that project */
+  project: string | null;
   options: IIssuePropertyOption[];
 }
 
@@ -59,5 +61,7 @@ export type TIssuePropertyPayload = {
   default_value?: string[];
   settings?: Record<string, unknown>;
   options?: TIssuePropertyOptionPayload[];
+  /** create-only: scope the property to the current project */
+  is_project_scoped?: boolean;
 };
 

@@ -11,11 +11,15 @@ from plane.db.models import IssueType
 
 
 class IssueTypeSerializer(BaseSerializer):
-    # Project-level default / level come from the ProjectIssueType mapping and are
-    # exposed here as annotations (ProjectIssueType.is_default is authoritative).
-    # They are read-only through this serializer; use mark_as_default to change them.
+    # Project-level default / level / active come from the ProjectIssueType mapping
+    # and are exposed here as annotations (the mapping is authoritative for all
+    # per-project state). They are read-only through this serializer; the viewset
+    # routes changes to the mapping (mark_as_default, partial_update is_active).
     is_default = serializers.BooleanField(source="project_default", read_only=True, default=False)
     level = serializers.FloatField(source="project_level", read_only=True, default=0)
+    is_active = serializers.BooleanField(source="project_is_active", read_only=True, default=True)
+    # Number of projects this (workspace-shared) type is linked to.
+    usage_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = IssueType
@@ -28,6 +32,7 @@ class IssueTypeSerializer(BaseSerializer):
             "is_active",
             "is_default",
             "level",
+            "usage_count",
             "workspace_id",
             "external_source",
             "external_id",
@@ -59,4 +64,16 @@ class IssueTypeLiteSerializer(BaseSerializer):
     class Meta:
         model = IssueType
         fields = ["id", "name", "logo_props", "is_epic", "is_active"]
+        read_only_fields = fields
+
+
+class IssueTypeAvailableSerializer(BaseSerializer):
+    """Workspace types offered to a project in the "Import from workspace" picker."""
+
+    usage_count = serializers.IntegerField(read_only=True, default=0)
+    properties_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = IssueType
+        fields = ["id", "name", "description", "logo_props", "is_epic", "usage_count", "properties_count"]
         read_only_fields = fields

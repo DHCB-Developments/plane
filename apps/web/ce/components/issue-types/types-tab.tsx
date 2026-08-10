@@ -6,14 +6,15 @@
 
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { Search } from "lucide-react";
+import { ChevronDown, Download, Plus, Search } from "lucide-react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/ui";
+import { CustomMenu } from "@plane/ui";
 // hooks
 import { useIssueTypes } from "@/hooks/store/use-issue-types";
 // local imports
 import { CreateUpdateWorkItemTypeModal } from "./create-update-type-modal";
+import { ImportWorkItemTypesModal } from "./import-types-modal";
 import { WorkItemTypeItem } from "./type-item";
 
 type Props = {
@@ -27,6 +28,7 @@ export const WorkItemTypesTab = observer(function WorkItemTypesTab(props: Props)
   const { getProjectIssueTypes } = useIssueTypes();
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const types = getProjectIssueTypes(projectId) ?? [];
   const filtered = useMemo(
@@ -39,6 +41,12 @@ export const WorkItemTypesTab = observer(function WorkItemTypesTab(props: Props)
       <CreateUpdateWorkItemTypeModal
         isOpen={isCreateOpen}
         handleClose={() => setIsCreateOpen(false)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+      />
+      <ImportWorkItemTypesModal
+        isOpen={isImportOpen}
+        handleClose={() => setIsImportOpen(false)}
         workspaceSlug={workspaceSlug}
         projectId={projectId}
       />
@@ -60,9 +68,29 @@ export const WorkItemTypesTab = observer(function WorkItemTypesTab(props: Props)
                 className="h-full w-40 bg-transparent text-13 text-secondary outline-none placeholder:text-placeholder"
               />
             </div>
-            <Button variant="primary" size="sm" onClick={() => setIsCreateOpen(true)}>
-              {t("work_item_types.create.button")}
-            </Button>
+            <CustomMenu
+              placement="bottom-end"
+              customButtonClassName="flex-shrink-0"
+              customButton={
+                <span className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-accent-primary px-3 py-1.5 text-13 font-medium leading-4 text-on-color hover:bg-accent-primary-hover">
+                  {t("work_item_types.create.button")}
+                  <ChevronDown className="size-3.5 flex-shrink-0" />
+                </span>
+              }
+            >
+              <CustomMenu.MenuItem onClick={() => setIsCreateOpen(true)}>
+                <span className="flex items-center gap-2">
+                  <Plus className="size-3.5" />
+                  {t("work_item_types.settings.types.project.add_button.create_new")}
+                </span>
+              </CustomMenu.MenuItem>
+              <CustomMenu.MenuItem onClick={() => setIsImportOpen(true)}>
+                <span className="flex items-center gap-2">
+                  <Download className="size-3.5" />
+                  {t("work_item_types.settings.types.project.add_button.import_from_workspace")}
+                </span>
+              </CustomMenu.MenuItem>
+            </CustomMenu>
           </div>
         </div>
         <div className="flex flex-col gap-3">

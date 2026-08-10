@@ -79,6 +79,9 @@ export const PropertyItem = observer(function PropertyItem(props: Props) {
       <div className="flex items-center gap-3 rounded-md border border-subtle bg-surface-1 px-3 py-2.5">
         {Icon && <Icon className="size-4 shrink-0 text-tertiary" />}
         <span className="grow truncate text-13 text-primary">{property.display_name}</span>
+        {property.project && (
+          <span className="rounded border border-subtle px-1.5 py-0.5 text-11 text-tertiary">Only this project</span>
+        )}
         {property.is_required && (
           <span className="text-11 font-medium text-accent-primary">
             {t("common.mandatory", { defaultValue: "Mandatory" })}
