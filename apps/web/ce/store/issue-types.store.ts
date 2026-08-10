@@ -10,6 +10,7 @@ import { computedFn } from "mobx-utils";
 // types
 import type {
   IIssueType,
+  IIssueTypeAvailable,
   IIssueProperty,
   TIssueTypePayload,
   TIssuePropertyPayload,
@@ -43,6 +44,8 @@ export interface IIssueTypesStore {
   ) => Promise<IIssueType>;
   deleteIssueType: (workspaceSlug: string, projectId: string, issueTypeId: string) => Promise<void>;
   markAsDefault: (workspaceSlug: string, projectId: string, issueTypeId: string) => Promise<void>;
+  fetchAvailableIssueTypes: (workspaceSlug: string, projectId: string) => Promise<IIssueTypeAvailable[]>;
+  importIssueType: (workspaceSlug: string, projectId: string, issueTypeId: string) => Promise<IIssueType>;
   // properties
   issuePropertiesMap: Record<string, IIssueProperty[]>;
   getPropertiesByTypeId: (issueTypeId: string | null | undefined) => IIssueProperty[];
@@ -103,6 +106,7 @@ export class IssueTypesStore implements IIssueTypesStore {
       updateIssueType: action,
       deleteIssueType: action,
       markAsDefault: action,
+      importIssueType: action,
       issuePropertiesMap: observable,
       issuePropertyValuesMap: observable,
       fetchIssueProperties: action,
@@ -218,6 +222,20 @@ export class IssueTypesStore implements IIssueTypesStore {
         if (issueType) set(this.issueTypeMap, [id, "is_default"], id === issueTypeId);
       });
     });
+  };
+
+
+  fetchAvailableIssueTypes = async (workspaceSlug: string, projectId: string) =>
+    this.issueTypeService.getAvailableIssueTypes(workspaceSlug, projectId);
+
+  importIssueType = async (workspaceSlug: string, projectId: string, issueTypeId: string) => {
+    const issueType = await this.issueTypeService.importIssueType(workspaceSlug, projectId, issueTypeId);
+    runInAction(() => {
+      set(this.issueTypeMap, [issueType.id], issueType);
+      const existing = this.projectIssueTypeIdsMap[projectId] ?? [];
+      if (!existing.includes(issueType.id)) set(this.projectIssueTypeIdsMap, [projectId], [...existing, issueType.id]);
+    });
+    return issueType;
   };
 
   // ----- custom properties -----

@@ -55,12 +55,23 @@ export const DeleteWorkItemTypeModal = observer(function DeleteWorkItemTypeModal
       handleClose={handleClose}
       handleSubmit={handleDelete}
       isSubmitting={isDeleting}
-      title={t("work_item_types.settings.item_delete_confirmation.title")}
+      title={
+        (issueType?.usage_count ?? 0) > 1
+          ? "Remove from project"
+          : t("work_item_types.settings.item_delete_confirmation.title")
+      }
       content={
-        <>
-          {t("work_item_types.settings.item_delete_confirmation.description")}
-          {issueType?.name ? ` (${issueType.name})` : ""}
-        </>
+        (issueType?.usage_count ?? 0) > 1 ? (
+          <>
+            {issueType?.name ? `"${issueType.name}" ` : "This type "}will be removed from this project only — it stays
+            available in the workspace and in the other projects using it.
+          </>
+        ) : (
+          <>
+            {t("work_item_types.settings.item_delete_confirmation.description")}
+            {issueType?.name ? ` (${issueType.name})` : ""}
+          </>
+        )
       }
       primaryButtonText={{
         loading: "Deleting",

@@ -25,7 +25,7 @@ type Props = {
 export const TypePropertiesSection = observer(function TypePropertiesSection(props: Props) {
   const { workspaceSlug, projectId, issueTypeId } = props;
   const { t } = useTranslation();
-  const { getPropertiesByTypeId, fetchIssueProperties } = useIssueTypes();
+  const { getPropertiesByTypeId, fetchIssueProperties, getIssueTypeById } = useIssueTypes();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   useSWR(
@@ -37,6 +37,7 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
   );
 
   const properties = getPropertiesByTypeId(issueTypeId);
+  const usageCount = getIssueTypeById(issueTypeId)?.usage_count ?? 0;
 
   return (
     <>
@@ -54,6 +55,11 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
           </span>
           <span className="text-12 text-tertiary">{properties.length}</span>
         </div>
+        {usageCount > 1 && (
+          <p className="text-11 text-tertiary">
+            Shared type — changes to shared properties apply in all {usageCount} projects using it; “Only this project” properties stay here.
+          </p>
+        )}
         {properties.map((property) => (
           <PropertyItem
             key={property.id}

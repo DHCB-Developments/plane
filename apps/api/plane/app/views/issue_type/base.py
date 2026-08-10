@@ -4,7 +4,7 @@
 
 # Django imports
 from django.db import transaction
-from django.db.models import OuterRef, Subquery, BooleanField, FloatField
+from django.db.models import Count, OuterRef, Q, Subquery, BooleanField, FloatField
 from django.db.models.functions import Coalesce
 from django.db.models import Value
 
@@ -14,9 +14,9 @@ from rest_framework.response import Response
 
 # Module imports
 from ..base import BaseViewSet
-from plane.app.serializers import IssueTypeSerializer
+from plane.app.serializers import IssueTypeSerializer, IssueTypeAvailableSerializer
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import IssueType, ProjectIssueType, Project, Issue
+from plane.db.models import IssueType, ProjectIssueType, Project, Issue, IssueProperty
 from plane.db.models.issue_type import DEFAULT_ISSUE_TYPES
 
 
@@ -50,6 +50,23 @@ class IssueTypeViewSet(BaseViewSet):
                     Subquery(project_issue_type.values("level")[:1], output_field=FloatField()),
                     Value(0.0),
                     output_field=FloatField(),
+                ),
+                project_is_active=Coalesce(
+                    Subquery(project_issue_type.values("is_active")[:1], output_field=BooleanField()),
+                    Value(True),
+                    output_field=BooleanField(),
+                ),
+                # Subquery, NOT Count over the join: the queryset already join-filters
+                # on this project's mapping, so a Count would only ever see 1.
+                usage_count=Coalesce(
+                    Subquery(
+                        ProjectIssueType.objects.filter(issue_type_id=OuterRef("pk"), deleted_at__isnull=True)
+                        .order_by()
+                        .values("issue_type_id")
+                        .annotate(c=Count("pk"))
+                        .values("c")[:1]
+                    ),
+                    Value(0),
                 ),
             )
             .select_related("workspace")
@@ -117,23 +134,31 @@ class IssueTypeViewSet(BaseViewSet):
 
         issue_type = project_issue_type.issue_type
 
-        # The default type cannot be deactivated.
-        if request.data.get("is_active") is False and project_issue_type.is_default:
-            return Response(
-                {"error": "The default work item type cannot be deactivated"},
-                status=status.HTTP_400_BAD_REQUEST,
+        # is_active is per-project state: route it to the mapping, not the shared type.
+        is_active = request.data.pop("is_active", None)
+        if is_active is not None:
+            # The default type cannot be deactivated.
+            if is_active is False and project_issue_type.is_default:
+                return Response(
+                    {"error": "The default work item type cannot be deactivated"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            project_issue_type.is_active = bool(is_active)
+            project_issue_type.updated_by = request.user
+            project_issue_type.save(update_fields=["is_active", "updated_by", "updated_at"])
+
+        # Anything left (name / description / logo_props) edits the shared workspace type.
+        if request.data:
+            serializer = IssueTypeSerializer(
+                issue_type,
+                data=request.data,
+                partial=True,
+                context={"workspace_id": issue_type.workspace_id},
             )
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save(updated_by=request.user)
 
-        serializer = IssueTypeSerializer(
-            issue_type,
-            data=request.data,
-            partial=True,
-            context={"workspace_id": issue_type.workspace_id},
-        )
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer.save(updated_by=request.user)
         instance = self.get_queryset().filter(pk=pk).first()
         return Response(IssueTypeSerializer(instance).data, status=status.HTTP_200_OK)
 
@@ -168,9 +193,77 @@ class IssueTypeViewSet(BaseViewSet):
             # changed individually (Issue.type is SET_NULL, so removing the type
             # nulls the FK — it never deletes work items).
             project_issue_type.delete()
+            # This project's own (project-scoped) properties on the type go with it.
+            for local_property in IssueProperty.objects.filter(issue_type_id=pk, project_id=project_id):
+                local_property.delete()
             if not ProjectIssueType.objects.filter(issue_type_id=pk).exists():
                 IssueType.objects.filter(pk=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @allow_permission([ROLE.ADMIN])
+    def available(self, request, slug, project_id):
+        """Workspace types not yet linked to this project — the "Import from workspace" picker."""
+        project = self._get_project(slug, project_id)
+        if project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # NOTE: exclude() with multiple conditions on a multi-valued relation does
+        # NOT apply them to the same row (unlike filter()), so a subquery is used to
+        # exclude types with a LIVE mapping to this project; soft-deleted mappings
+        # don't count, so removed types can be re-imported.
+        linked_type_ids = ProjectIssueType.objects.filter(
+            project_id=project_id, deleted_at__isnull=True
+        ).values_list("issue_type_id", flat=True)
+        issue_types = (
+            IssueType.objects.filter(workspace__slug=slug, is_epic=False, deleted_at__isnull=True)
+            .exclude(pk__in=linked_type_ids)
+            .annotate(
+                usage_count=Count(
+                    "project_issue_types",
+                    filter=Q(project_issue_types__deleted_at__isnull=True),
+                    distinct=True,
+                ),
+                properties_count=Count(
+                    "properties",
+                    filter=Q(properties__deleted_at__isnull=True),
+                    distinct=True,
+                ),
+            )
+            .order_by("name")
+        )
+        return Response(IssueTypeAvailableSerializer(issue_types, many=True).data, status=status.HTTP_200_OK)
+
+    @allow_permission([ROLE.ADMIN])
+    def import_type(self, request, slug, project_id, pk):
+        """Link an existing workspace type to this project (idempotent)."""
+        project = self._get_project(slug, project_id)
+        if project is None:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not project.is_issue_type_enabled:
+            return Response(
+                {"error": "Work item types are not enabled for this project"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        issue_type = IssueType.objects.filter(pk=pk, workspace__slug=slug, deleted_at__isnull=True).first()
+        if issue_type is None:
+            return Response({"error": "Work item type not found"}, status=status.HTTP_404_NOT_FOUND)
+        if issue_type.is_epic:
+            return Response({"error": "Epics cannot be imported"}, status=status.HTTP_400_BAD_REQUEST)
+
+        ProjectIssueType.objects.get_or_create(
+            project_id=project_id,
+            issue_type=issue_type,
+            defaults={
+                "is_default": False,
+                "is_active": True,
+                "level": int(issue_type.level or 0),
+                "created_by": request.user,
+                "updated_by": request.user,
+            },
+        )
+        instance = self.get_queryset().filter(pk=pk).first()
+        return Response(IssueTypeSerializer(instance).data, status=status.HTTP_200_OK)
 
     @allow_permission([ROLE.ADMIN])
     def enable(self, request, slug, project_id):
@@ -192,25 +285,37 @@ class IssueTypeViewSet(BaseViewSet):
 
             default_type = None
             for type_config in DEFAULT_ISSUE_TYPES:
-                issue_type = IssueType.objects.create(
+                # Types are a workspace-level catalog: if another project already
+                # seeded this type, REUSE it instead of creating a duplicate name.
+                issue_type = IssueType.objects.filter(
                     workspace_id=project.workspace_id,
-                    name=type_config["name"],
-                    description=type_config["description"],
-                    logo_props=type_config["logo_props"],
+                    name__iexact=type_config["name"],
                     is_epic=type_config["is_epic"],
-                    is_default=type_config["is_default"],
-                    is_active=True,
-                    level=type_config["level"],
-                    created_by=request.user,
-                    updated_by=request.user,
-                )
-                ProjectIssueType.objects.create(
+                    deleted_at__isnull=True,
+                ).first()
+                if issue_type is None:
+                    issue_type = IssueType.objects.create(
+                        workspace_id=project.workspace_id,
+                        name=type_config["name"],
+                        description=type_config["description"],
+                        logo_props=type_config["logo_props"],
+                        is_epic=type_config["is_epic"],
+                        is_default=type_config["is_default"],
+                        is_active=True,
+                        level=type_config["level"],
+                        created_by=request.user,
+                        updated_by=request.user,
+                    )
+                ProjectIssueType.objects.get_or_create(
                     project_id=project_id,
                     issue_type=issue_type,
-                    is_default=type_config["is_default"],
-                    level=type_config["level"],
-                    created_by=request.user,
-                    updated_by=request.user,
+                    defaults={
+                        "is_default": type_config["is_default"],
+                        "is_active": True,
+                        "level": type_config["level"],
+                        "created_by": request.user,
+                        "updated_by": request.user,
+                    },
                 )
                 if type_config["is_default"]:
                     default_type = issue_type

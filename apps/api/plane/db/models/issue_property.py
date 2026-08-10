@@ -50,13 +50,20 @@ class IssueProperty(WorkspaceBaseModel):
         verbose_name_plural = "Issue Properties"
         db_table = "issue_properties"
         ordering = ("sort_order",)
-        unique_together = ["issue_type", "display_name", "deleted_at"]
+        unique_together = ["issue_type", "display_name", "project", "deleted_at"]
         constraints = [
+            # Scope-aware uniqueness (project is NULL for workspace-shared
+            # properties, so NULL-distinct semantics need two partial constraints).
             models.UniqueConstraint(
                 fields=["issue_type", "display_name"],
-                condition=Q(deleted_at__isnull=True),
-                name="issue_property_unique_issue_type_name_when_deleted_at_null",
-            )
+                condition=Q(deleted_at__isnull=True, project__isnull=True),
+                name="issue_property_unique_shared_name_when_deleted_at_null",
+            ),
+            models.UniqueConstraint(
+                fields=["issue_type", "display_name", "project"],
+                condition=Q(deleted_at__isnull=True, project__isnull=False),
+                name="issue_property_unique_project_name_when_deleted_at_null",
+            ),
         ]
 
     def save(self, *args, **kwargs):

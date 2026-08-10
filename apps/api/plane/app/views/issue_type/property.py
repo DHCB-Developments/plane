@@ -7,6 +7,7 @@ from datetime import datetime
 
 # Django imports
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
@@ -95,7 +96,14 @@ def extract_value(value):
     return None
 
 
-def missing_required_property_values(issue_type_id, values_map):
+def visible_properties(issue_type_id, project_id):
+    """Properties of a type visible in a project: workspace-shared + that project's own."""
+    return IssueProperty.objects.filter(issue_type_id=issue_type_id).filter(
+        Q(project__isnull=True) | Q(project_id=project_id)
+    )
+
+
+def missing_required_property_values(issue_type_id, values_map, project_id=None):
     """Return the display names of active, required properties on the type that have no value.
 
     Used for server-side mandatory enforcement wherever the type and its values are known
@@ -114,7 +122,7 @@ def missing_required_property_values(issue_type_id, values_map):
 
     return [
         prop.display_name
-        for prop in IssueProperty.objects.filter(issue_type_id=issue_type_id, is_active=True, is_required=True)
+        for prop in visible_properties(issue_type_id, project_id).filter(is_active=True, is_required=True)
         if _is_empty(values_map.get(str(prop.id)))
     ]
 
@@ -129,7 +137,9 @@ def set_issue_property_values(issue, values_map, actor):
     """
     if not values_map or not getattr(issue, "type_id", None):
         return
-    type_properties = {str(p.id): p for p in IssueProperty.objects.filter(issue_type_id=issue.type_id, is_active=True)}
+    type_properties = {
+        str(p.id): p for p in visible_properties(issue.type_id, issue.project_id).filter(is_active=True)
+    }
     for prop_id, raw_values in values_map.items():
         prop = type_properties.get(str(prop_id))
         if prop is None:
@@ -163,6 +173,8 @@ class IssuePropertyViewSet(BaseViewSet):
                 workspace__slug=self.kwargs.get("slug"),
                 issue_type_id=self.kwargs.get("issue_type_id"),
             )
+            # Scope: workspace-shared properties + this project's own.
+            .filter(Q(project__isnull=True) | Q(project_id=self.kwargs.get("project_id")))
             .prefetch_related("options")
             .order_by("sort_order")
         )
@@ -196,6 +208,7 @@ class IssuePropertyViewSet(BaseViewSet):
                 IssuePropertyOption.objects.create(
                     property=property_obj,
                     workspace=property_obj.workspace,
+                    project=property_obj.project,
                     created_by=actor,
                     updated_by=actor,
                     **data,
@@ -217,7 +230,10 @@ class IssuePropertyViewSet(BaseViewSet):
             return Response({"error": "Work item type not found in project"}, status=status.HTTP_404_NOT_FOUND)
 
         options = request.data.get("options", [])
-        serializer = IssuePropertySerializer(data=request.data)
+        is_project_scoped = bool(request.data.get("is_project_scoped", False))
+        serializer = IssuePropertySerializer(
+            data=request.data, context={"project_id": project_id, "issue_type_id": issue_type_id}
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -230,6 +246,9 @@ class IssuePropertyViewSet(BaseViewSet):
             prop = serializer.save(
                 issue_type_id=issue_type_id,
                 workspace_id=project.workspace_id,
+                # NULL project = shared across every project using the type;
+                # set = visible only in this project.
+                project_id=project_id if is_project_scoped else None,
                 created_by=request.user,
                 updated_by=request.user,
             )
@@ -245,7 +264,12 @@ class IssuePropertyViewSet(BaseViewSet):
         if prop is None:
             return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = IssuePropertySerializer(prop, data=request.data, partial=True)
+        serializer = IssuePropertySerializer(
+            prop,
+            data=request.data,
+            partial=True,
+            context={"project_id": project_id, "issue_type_id": issue_type_id},
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -19,6 +19,16 @@ urlpatterns = [
         name="project-issue-types-enable",
     ),
     path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issue-types/available/",
+        IssueTypeViewSet.as_view({"get": "available"}),
+        name="project-issue-types-available",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issue-types/<uuid:pk>/import/",
+        IssueTypeViewSet.as_view({"post": "import_type"}),
+        name="project-issue-type-import",
+    ),
+    path(
         "workspaces/<str:slug>/projects/<uuid:project_id>/issue-types/<uuid:pk>/",
         IssueTypeViewSet.as_view(
             {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
