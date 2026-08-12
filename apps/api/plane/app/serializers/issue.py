@@ -220,6 +220,19 @@ class IssueCreateSerializer(BaseSerializer):
         workspace_id = self.context["workspace_id"]
         default_assignee_id = self.context["default_assignee_id"]
 
+        # Fall back to the project's default work item type when none was sent.
+        # Covers every create path that bypasses the modal (quick-add, sub-issues,
+        # intake, external API); a mapping only exists when types are enabled.
+        if validated_data.get("type") is None:
+            validated_data.pop("type", None)
+            default_mapping = (
+                ProjectIssueType.objects.filter(project_id=project_id, is_default=True, deleted_at__isnull=True)
+                .only("issue_type_id")
+                .first()
+            )
+            if default_mapping is not None:
+                validated_data["type_id"] = default_mapping.issue_type_id
+
         # Create Issue
         issue = Issue.objects.create(**validated_data, project_id=project_id)
 

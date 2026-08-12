@@ -264,6 +264,52 @@ class IssuePropertyViewSet(BaseViewSet):
         if prop is None:
             return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Scope transitions (shared <-> only-this-project), guarded both ways.
+        if "is_project_scoped" in request.data:
+            want_local = bool(request.data.get("is_project_scoped"))
+            is_local = prop.project_id is not None
+            if want_local != is_local:
+                if want_local:
+                    # shared -> local would orphan values on other projects' work items.
+                    other_values = (
+                        IssuePropertyValue.objects.filter(property=prop).exclude(project_id=project_id).count()
+                    )
+                    if other_values:
+                        return Response(
+                            {
+                                "error": f"Cannot scope to this project: {other_values} value(s) exist on work "
+                                "items in other projects. Clear them first."
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    prop.project_id = project_id
+                else:
+                    # local -> shared: the name must be free across the whole type
+                    # (any other shared or project-local property would collide in
+                    # someone's visible set).
+                    name_clash = (
+                        IssueProperty.objects.filter(
+                            issue_type_id=prop.issue_type_id,
+                            display_name__iexact=prop.display_name,
+                            deleted_at__isnull=True,
+                        )
+                        .exclude(pk=prop.pk)
+                        .exists()
+                    )
+                    if name_clash:
+                        return Response(
+                            {
+                                "error": "Cannot share: a property with this name already exists on this type "
+                                "in another project."
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    prop.project_id = None
+                prop.updated_by = request.user
+                prop.save(update_fields=["project", "workspace", "updated_by", "updated_at"])
+                # Options follow the property's scope.
+                prop.options.filter(deleted_at__isnull=True).update(project_id=prop.project_id)
+
         serializer = IssuePropertySerializer(
             prop,
             data=request.data,
