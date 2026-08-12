@@ -106,7 +106,7 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
       settings,
       default_value: defaultValue,
       ...(isDropdown ? { options } : {}),
-      ...(propertyId ? {} : { is_project_scoped: isProjectScoped }),
+      is_project_scoped: isProjectScoped,
     };
 
     setIsSubmitting(true);
@@ -123,7 +123,7 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Error!",
-        message: error?.display_name?.[0] ?? error?.is_required ?? error?.options ?? "Something went wrong.",
+        message: error?.display_name?.[0] ?? error?.is_required ?? error?.options ?? error?.error ?? "Something went wrong.",
       });
     } finally {
       setIsSubmitting(false);
@@ -307,11 +307,10 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             Active
           </label>
-          <label className={`flex items-center gap-2 text-13 ${propertyId ? "opacity-50" : ""}`}>
+          <label className="flex items-center gap-2 text-13">
             <input
               type="checkbox"
               checked={isProjectScoped}
-              disabled={!!propertyId}
               onChange={(e) => setIsProjectScoped(e.target.checked)}
             />
             Only this project

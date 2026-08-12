@@ -40,16 +40,15 @@ export const IssueTypeSwitcher = observer(function IssueTypeSwitcher(props: TIss
   if (!issue || !issue.project_id) return <></>;
   const projectId = issue.project_id;
   const currentType = getIssueTypeById(issue.type_id);
+  const activeTypes = (getProjectIssueTypes(projectId) ?? []).filter((type) => type.is_active);
 
-  // Fall back to the plain identifier when work item types are not enabled for the
-  // project or the issue has no resolvable type.
-  if (!isWorkItemTypeEnabledForProject(projectId) || !currentType) {
+  // Plain identifier when the feature is off for the project or there is nothing to pick.
+  if (!isWorkItemTypeEnabledForProject(projectId) || activeTypes.length === 0) {
     return <IssueIdentifier issueId={issueId} projectId={projectId} size="md" enableClickToCopyIdentifier />;
   }
 
   const projectIdentifier = getProjectIdentifierById(projectId);
-  const activeTypes = (getProjectIssueTypes(projectId) ?? []).filter((type) => type.is_active);
-  const currentColor = currentType.logo_props?.in_use === "icon" ? currentType.logo_props.icon?.color : undefined;
+  const currentColor = currentType?.logo_props?.in_use === "icon" ? currentType.logo_props.icon?.color : undefined;
 
   const options = activeTypes.map((type) => {
     const color = type.logo_props?.in_use === "icon" ? type.logo_props.icon?.color : undefined;
@@ -67,6 +66,22 @@ export const IssueTypeSwitcher = observer(function IssueTypeSwitcher(props: TIss
     };
   });
 
+  // An untyped work item (e.g. created via quick-add before the backend fallback
+  // existed) gets an explicit "Set type" affordance instead of no control at all.
+  const pill = currentType ? (
+    <span
+      className="flex items-center gap-1 rounded px-1.5 py-1 text-13 font-medium"
+      style={{ backgroundColor: toTint(currentColor, 0.25), color: currentColor }}
+    >
+      <Logo logo={currentType.logo_props} size={14} type="lucide" />
+      <span className="truncate">{currentType.name}</span>
+    </span>
+  ) : (
+    <span className="flex items-center gap-1 rounded border border-dashed border-strong px-1.5 py-1 text-13 text-tertiary">
+      Set type
+    </span>
+  );
+
   return (
     <div className="flex items-center gap-2">
       <CustomSearchSelect
@@ -78,14 +93,8 @@ export const IssueTypeSwitcher = observer(function IssueTypeSwitcher(props: TIss
         }}
         noChevron
         customButton={
-          <Tooltip tooltipContent="Switch work item type" disabled={disabled}>
-            <span
-              className="flex items-center gap-1 rounded px-1.5 py-1 text-13 font-medium"
-              style={{ backgroundColor: toTint(currentColor, 0.25), color: currentColor }}
-            >
-              <Logo logo={currentType.logo_props} size={14} type="lucide" />
-              <span className="truncate">{currentType.name}</span>
-            </span>
+          <Tooltip tooltipContent={currentType ? "Switch work item type" : "Set work item type"} disabled={disabled}>
+            {pill}
           </Tooltip>
         }
       />
