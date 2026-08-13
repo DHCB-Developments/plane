@@ -102,6 +102,11 @@ from .module import (
 from .api import APITokenSerializer, APITokenReadSerializer
 
 from .importer import ImporterSerializer
+from .integration import (
+    IntegrationSerializer,
+    WorkspaceIntegrationSerializer,
+    GithubRepositorySerializer,
+)
 
 from .page import (
     PageSerializer,

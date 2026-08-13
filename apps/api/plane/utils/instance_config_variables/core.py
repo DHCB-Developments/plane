@@ -93,6 +93,32 @@ github_config_variables = [
         "category": "GITHUB",
         "is_encrypted": False,
     },
+    # GitHub App used for the workspace GitHub integration (repos / PRs on
+    # work items). Distinct from the OAuth SSO credentials above.
+    {
+        "key": "GITHUB_APP_ID",
+        "value": os.environ.get("GITHUB_APP_ID"),
+        "category": "GITHUB",
+        "is_encrypted": False,
+    },
+    {
+        "key": "GITHUB_APP_SLUG",
+        "value": os.environ.get("GITHUB_APP_SLUG"),
+        "category": "GITHUB",
+        "is_encrypted": False,
+    },
+    {
+        "key": "GITHUB_APP_PRIVATE_KEY",
+        "value": os.environ.get("GITHUB_APP_PRIVATE_KEY"),
+        "category": "GITHUB",
+        "is_encrypted": True,
+    },
+    {
+        "key": "GITHUB_APP_WEBHOOK_SECRET",
+        "value": os.environ.get("GITHUB_APP_WEBHOOK_SECRET"),
+        "category": "GITHUB",
+        "is_encrypted": True,
+    },
 ]
 
 
