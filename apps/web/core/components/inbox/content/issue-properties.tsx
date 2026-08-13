@@ -39,7 +39,7 @@ type Props = {
   isIntakeAccepted: boolean;
 };
 
-import { WorkItemAdditionalSidebarProperties } from "@/plane-web/components/issues/issue-details/additional-properties";
+import { WorkItemAdditionalSidebarProperties } from "@/components/issues/issue-detail/additional-properties";
 
 export const InboxIssueContentProperties = observer(function InboxIssueContentProperties(props: Props) {
   const { workspaceSlug, projectId, issue, issueOperations, isEditable, duplicateIssueDetails, isIntakeAccepted } =

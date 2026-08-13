@@ -14,7 +14,7 @@ import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // plane web
-import { WorkItemTypesRoot } from "@/plane-web/components/issue-types/root";
+import { WorkItemTypesRoot } from "@/components/issue-types/root";
 // local imports
 import type { Route } from "./+types/page";
 import { WorkItemTypesProjectSettingsHeader } from "./header";

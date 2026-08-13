@@ -30,9 +30,9 @@ import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useIssueTypes } from "@/hooks/store/use-issue-types";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web
-import { getPropertyTypeMeta } from "@/plane-web/components/issue-types/property-type-options";
-import { toTint } from "@/plane-web/components/issues/issue-details/issue-identifier";
-import { PropertyValueInput } from "@/plane-web/components/issues/issue-details/property-value-input";
+import { getPropertyTypeMeta } from "@/components/issue-types/property-type-options";
+import { toTint } from "@/components/issues/issue-detail/issue-identifier";
+import { PropertyValueInput } from "@/components/issues/property-value-input";
 
 type TInboxIssueProperties = {
   projectId: string;
