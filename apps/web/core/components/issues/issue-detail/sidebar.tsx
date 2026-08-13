@@ -34,6 +34,7 @@ import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // work item types
 import { WorkItemAdditionalSidebarProperties } from "@/components/issues/issue-detail/additional-properties";
+import { GithubLinksSection } from "@/components/issues/issue-detail/github-links";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -258,6 +259,8 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
               workspaceSlug={workspaceSlug}
               isEditable={isEditable}
             />
+
+            <GithubLinksSection workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
           </div>
         </div>
       </div>

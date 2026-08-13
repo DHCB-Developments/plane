@@ -106,6 +106,8 @@ from .integration import (
     IntegrationSerializer,
     WorkspaceIntegrationSerializer,
     GithubRepositorySerializer,
+    GithubPullRequestLinkSerializer,
+    GithubBranchLinkSerializer,
 )
 
 from .page import (

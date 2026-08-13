@@ -7,6 +7,7 @@ from django.urls import path
 from plane.app.views.integration import (
     GithubConnectionEndpoint,
     GithubInstallationRepositoriesEndpoint,
+    IssueGithubLinksEndpoint,
     ProjectGithubRepositoryViewSet,
 )
 
@@ -30,5 +31,10 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/github-repositories/<uuid:pk>/",
         ProjectGithubRepositoryViewSet.as_view({"patch": "partial_update", "delete": "destroy"}),
         name="project-github-repository-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/github-links/",
+        IssueGithubLinksEndpoint.as_view(),
+        name="issue-github-links",
     ),
 ]

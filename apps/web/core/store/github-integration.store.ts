@@ -12,6 +12,7 @@ import {
   GithubIntegrationService,
   type TGithubConnectionStatus,
   type TGithubInstallationRepo,
+  type TGithubIssueLinks,
   type TGithubProjectRepository,
 } from "@/services/integrations/github-integration.service";
 // store
@@ -22,10 +23,12 @@ export interface IGithubIntegrationStore {
   connectionStatus: TGithubConnectionStatus | undefined;
   installationRepos: TGithubInstallationRepo[] | undefined;
   projectRepositoriesMap: Record<string, TGithubProjectRepository[]>;
+  issueLinksMap: Record<string, TGithubIssueLinks>;
   // computed fns
   isConnected: boolean;
   getProjectRepositories: (projectId: string | null | undefined) => TGithubProjectRepository[] | undefined;
   getProjectDefaultRepository: (projectId: string | null | undefined) => TGithubProjectRepository | undefined;
+  getIssueLinks: (issueId: string | null | undefined) => TGithubIssueLinks | undefined;
   // actions
   fetchConnectionStatus: (workspaceSlug: string) => Promise<TGithubConnectionStatus>;
   connect: (workspaceSlug: string, installationId: string) => Promise<void>;
@@ -39,12 +42,14 @@ export interface IGithubIntegrationStore {
   ) => Promise<TGithubProjectRepository>;
   setDefaultRepository: (workspaceSlug: string, projectId: string, repositoryId: string) => Promise<void>;
   detachRepository: (workspaceSlug: string, projectId: string, repositoryId: string) => Promise<void>;
+  fetchIssueLinks: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TGithubIssueLinks>;
 }
 
 export class GithubIntegrationStore implements IGithubIntegrationStore {
   connectionStatus: TGithubConnectionStatus | undefined = undefined;
   installationRepos: TGithubInstallationRepo[] | undefined = undefined;
   projectRepositoriesMap: Record<string, TGithubProjectRepository[]> = {};
+  issueLinksMap: Record<string, TGithubIssueLinks> = {};
 
   service: GithubIntegrationService;
 
@@ -53,6 +58,8 @@ export class GithubIntegrationStore implements IGithubIntegrationStore {
       connectionStatus: observable,
       installationRepos: observable,
       projectRepositoriesMap: observable,
+      issueLinksMap: observable,
+      fetchIssueLinks: action,
       fetchConnectionStatus: action,
       connect: action,
       disconnect: action,
@@ -76,6 +83,18 @@ export class GithubIntegrationStore implements IGithubIntegrationStore {
   getProjectDefaultRepository = computedFn((projectId: string | null | undefined) =>
     projectId ? this.projectRepositoriesMap[projectId]?.find((repo) => repo.config?.is_default) : undefined
   );
+
+  getIssueLinks = computedFn((issueId: string | null | undefined) =>
+    issueId ? this.issueLinksMap[issueId] : undefined
+  );
+
+  fetchIssueLinks = async (workspaceSlug: string, projectId: string, issueId: string) => {
+    const links = await this.service.getIssueLinks(workspaceSlug, projectId, issueId);
+    runInAction(() => {
+      set(this.issueLinksMap, [issueId], links);
+    });
+    return links;
+  };
 
   fetchConnectionStatus = async (workspaceSlug: string) => {
     const status = await this.service.getConnection(workspaceSlug);

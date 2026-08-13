@@ -52,6 +52,41 @@ export type TGithubProjectRepository = {
   created_at: string;
 };
 
+export type TGithubPullRequestLink = {
+  id: string;
+  issue: string;
+  repository_id: number;
+  repo_full_name: string;
+  pr_number: number;
+  title: string;
+  url: string;
+  state: "draft" | "open" | "merged" | "closed";
+  review_state: string;
+  checks_state: string;
+  author: string;
+  author_avatar: string;
+  source_branch: string;
+  target_branch: string;
+  link_type: "closing" | "reference" | "relation" | "manual";
+  last_event_at: string | null;
+  created_at: string;
+};
+
+export type TGithubBranchLink = {
+  id: string;
+  issue: string;
+  repository_id: number;
+  repo_full_name: string;
+  branch_name: string;
+  url: string;
+  created_at: string;
+};
+
+export type TGithubIssueLinks = {
+  pull_requests: TGithubPullRequestLink[];
+  branches: TGithubBranchLink[];
+};
+
 export class GithubIntegrationService extends APIService {
   constructor() {
     super(API_BASE_URL);
@@ -119,6 +154,14 @@ export class GithubIntegrationService extends APIService {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/`, {
       is_default: true,
     })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getIssueLinks(workspaceSlug: string, projectId: string, issueId: string): Promise<TGithubIssueLinks> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
