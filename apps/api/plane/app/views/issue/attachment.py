@@ -182,10 +182,23 @@ class IssueAttachmentV2Endpoint(BaseAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            # Inline disposition is opt-in and restricted to browser-renderable
+            # media types. Script-capable types (SVG, HTML, ...) must stay
+            # "attachment": assets are served from the application's origin, so
+            # rendering them inline would be a same-origin XSS vector.
+            disposition = "attachment"
+            if request.GET.get("disposition") == "inline":
+                asset_mime_type = (asset.attributes.get("type") or "").split(";")[0].strip().lower()
+                is_inline_safe_mime_type = asset_mime_type == "application/pdf" or asset_mime_type.startswith(
+                    ("image/", "video/", "audio/")
+                )
+                if is_inline_safe_mime_type and asset_mime_type not in settings.SCRIPT_CAPABLE_MIME_TYPES:
+                    disposition = "inline"
+
             storage = S3Storage(request=request)
             presigned_url = storage.generate_presigned_url(
                 object_name=asset.asset.name,
-                disposition="attachment",
+                disposition=disposition,
                 filename=asset.attributes.get("name"),
             )
             return HttpResponseRedirect(presigned_url)

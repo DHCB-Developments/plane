@@ -13,11 +13,18 @@ import type { TIssueServiceType } from "@plane/types";
 import { EIssueServiceType } from "@plane/types";
 // ui
 import { CustomMenu } from "@plane/ui";
-import { convertBytesToSize, getFileExtension, getFileName, getFileURL, renderFormattedDate } from "@plane/utils";
+import {
+  convertBytesToSize,
+  getAttachmentPreviewType,
+  getFileExtension,
+  getFileName,
+  getFileURL,
+  renderFormattedDate,
+} from "@plane/utils";
 // components
 //
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
-import { getFileIcon } from "@/components/icons";
+import { AttachmentThumbnail } from "./attachment-thumbnail";
 // helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -28,12 +35,13 @@ type TIssueAttachmentsListItem = {
   attachmentId: string;
   disabled?: boolean;
   issueServiceType?: TIssueServiceType;
+  onPreview?: (attachmentId: string) => void;
 };
 
 export const IssueAttachmentsListItem = observer(function IssueAttachmentsListItem(props: TIssueAttachmentsListItem) {
   const { t } = useTranslation();
   // props
-  const { attachmentId, disabled, issueServiceType = EIssueServiceType.ISSUES } = props;
+  const { attachmentId, disabled, issueServiceType = EIssueServiceType.ISSUES, onPreview } = props;
   // store hooks
   const { getUserDetails } = useMember();
   const {
@@ -44,8 +52,9 @@ export const IssueAttachmentsListItem = observer(function IssueAttachmentsListIt
   const attachment = attachmentId ? getAttachmentById(attachmentId) : undefined;
   const fileName = getFileName(attachment?.attributes.name ?? "");
   const fileExtension = getFileExtension(attachment?.attributes.name ?? "");
-  const fileIcon = getFileIcon(fileExtension, 18);
   const fileURL = getFileURL(attachment?.asset_url ?? "");
+  const isPreviewable =
+    getAttachmentPreviewType(attachment?.attributes.name ?? "", attachment?.attributes.type) !== "none";
   // hooks
   const { isMobile } = usePlatformOS();
 
@@ -57,12 +66,13 @@ export const IssueAttachmentsListItem = observer(function IssueAttachmentsListIt
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          window.open(fileURL, "_blank");
+          if (isPreviewable && onPreview) onPreview(attachmentId);
+          else window.open(fileURL, "_blank");
         }}
       >
         <div className="group flex h-11 items-center justify-between gap-3 pr-2 pl-9 hover:bg-surface-2">
           <div className="flex items-center gap-3 truncate text-13">
-            <div className="flex items-center gap-3">{fileIcon}</div>
+            <AttachmentThumbnail attachment={attachment} className="size-7" iconSize={18} />
             <Tooltip tooltipContent={`${fileName}.${fileExtension}`} isMobile={isMobile}>
               <p className="truncate font-medium text-secondary">{`${fileName}.${fileExtension}`}</p>
             </Tooltip>

@@ -24,9 +24,11 @@ import {
   Heading5,
   Heading6,
   CaseSensitive,
+  MessageSquareText,
   MinusSquare,
   Palette,
   AlignCenter,
+  Smile,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LinkIcon } from "@plane/propel/icons";
@@ -34,9 +36,11 @@ import { LinkIcon } from "@plane/propel/icons";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers
 import {
+  insertCallout,
   insertHorizontalRule,
   insertImage,
   insertTableCommand,
+  openEmojiPicker,
   setLinkEditor,
   setText,
   setTextAlign,
@@ -198,6 +202,24 @@ export const ImageItem = (editor: Editor): EditorMenuItem<"image"> => ({
   icon: ImageIcon,
 });
 
+export const CalloutItem = (editor: Editor): EditorMenuItem<"callout"> =>
+  ({
+    key: "callout",
+    name: "Callout",
+    isActive: () => editor?.isActive(CORE_EXTENSIONS.CALLOUT),
+    command: () => insertCallout(editor),
+    icon: MessageSquareText,
+  }) as const;
+
+export const EmojiItem = (editor: Editor): EditorMenuItem<"emoji"> =>
+  ({
+    key: "emoji",
+    name: "Emoji",
+    isActive: () => false,
+    command: () => openEmojiPicker(editor),
+    icon: Smile,
+  }) as const;
+
 export const HorizontalRuleItem = (editor: Editor): EditorMenuItem<"divider"> =>
   ({
     key: "divider",
@@ -277,6 +299,8 @@ export const getEditorMenuItems = (editor: Editor | null): EditorMenuItem<TEdito
     QuoteItem(editor),
     TableItem(editor),
     ImageItem(editor),
+    CalloutItem(editor),
+    EmojiItem(editor),
     HorizontalRuleItem(editor),
     LinkItem(editor),
     TextColorItem(editor),
