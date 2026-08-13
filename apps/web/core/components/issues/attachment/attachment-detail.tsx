@@ -13,6 +13,7 @@ import { CloseIcon } from "@plane/propel/icons";
 import { Tooltip } from "@plane/propel/tooltip";
 import {
   convertBytesToSize,
+  getAttachmentPreviewType,
   getFileExtension,
   getFileName,
   getFileURL,
@@ -21,9 +22,9 @@ import {
 } from "@plane/utils";
 // icons
 //
-import { getFileIcon } from "@/components/icons";
 // components
 import { IssueAttachmentDeleteModal } from "@/components/issues/attachment/delete-attachment-modal";
+import { AttachmentThumbnail } from "@/components/issues/attachment/attachment-thumbnail";
 // helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -38,11 +39,12 @@ type TIssueAttachmentsDetail = {
   attachmentId: string;
   attachmentHelpers: TAttachmentOperationsRemoveModal;
   disabled?: boolean;
+  onPreview?: (attachmentId: string) => void;
 };
 
 export const IssueAttachmentsDetail = observer(function IssueAttachmentsDetail(props: TIssueAttachmentsDetail) {
   // props
-  const { attachmentId, attachmentHelpers, disabled } = props;
+  const { attachmentId, attachmentHelpers, disabled, onPreview } = props;
   // store hooks
   const { getUserDetails } = useMember();
   const {
@@ -54,12 +56,41 @@ export const IssueAttachmentsDetail = observer(function IssueAttachmentsDetail(p
   const attachment = attachmentId ? getAttachmentById(attachmentId) : undefined;
   const fileName = getFileName(attachment?.attributes.name ?? "");
   const fileExtension = getFileExtension(attachment?.asset_url ?? "");
-  const fileIcon = getFileIcon(fileExtension, 28);
   const fileURL = getFileURL(attachment?.asset_url ?? "");
+  const isPreviewable =
+    getAttachmentPreviewType(attachment?.attributes.name ?? "", attachment?.attributes.type) !== "none";
   // hooks
   const { isMobile } = usePlatformOS();
 
   if (!attachment) return <></>;
+
+  const attachmentDetails = (
+    <div className="flex items-center gap-3">
+      <AttachmentThumbnail attachment={attachment} className="size-9" iconSize={28} />
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Tooltip tooltipContent={fileName} isMobile={isMobile}>
+            <span className="text-13">{truncateText(`${fileName}`, 10)}</span>
+          </Tooltip>
+          <Tooltip
+            isMobile={isMobile}
+            tooltipContent={`${
+              getUserDetails(attachment.updated_by)?.display_name ?? ""
+            } uploaded on ${renderFormattedDate(attachment.updated_at)}`}
+          >
+            <span>
+              <AlertCircle className="h-3 w-3" />
+            </span>
+          </Tooltip>
+        </div>
+
+        <div className="flex items-center gap-3 text-11 text-secondary">
+          <span>{fileExtension.toUpperCase()}</span>
+          <span>{convertBytesToSize(attachment.attributes.size)}</span>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -72,33 +103,15 @@ export const IssueAttachmentsDetail = observer(function IssueAttachmentsDetail(p
         />
       )}
       <div className="flex h-[60px] items-center justify-between gap-1 rounded-md border-[2px] border-subtle bg-surface-1 px-4 py-2 text-13">
-        <Link href={fileURL ?? ""} target="_blank" rel="noopener noreferrer">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-7">{fileIcon}</div>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Tooltip tooltipContent={fileName} isMobile={isMobile}>
-                  <span className="text-13">{truncateText(`${fileName}`, 10)}</span>
-                </Tooltip>
-                <Tooltip
-                  isMobile={isMobile}
-                  tooltipContent={`${
-                    getUserDetails(attachment.updated_by)?.display_name ?? ""
-                  } uploaded on ${renderFormattedDate(attachment.updated_at)}`}
-                >
-                  <span>
-                    <AlertCircle className="h-3 w-3" />
-                  </span>
-                </Tooltip>
-              </div>
-
-              <div className="flex items-center gap-3 text-11 text-secondary">
-                <span>{fileExtension.toUpperCase()}</span>
-                <span>{convertBytesToSize(attachment.attributes.size)}</span>
-              </div>
-            </div>
-          </div>
-        </Link>
+        {isPreviewable && onPreview ? (
+          <button type="button" onClick={() => onPreview(attachmentId)}>
+            {attachmentDetails}
+          </button>
+        ) : (
+          <Link href={fileURL ?? ""} target="_blank" rel="noopener noreferrer">
+            {attachmentDetails}
+          </Link>
+        )}
 
         {!disabled && (
           <button type="button" onClick={() => setIsDeleteIssueAttachmentModalOpen(true)}>
