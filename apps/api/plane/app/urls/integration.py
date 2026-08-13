@@ -6,6 +6,7 @@ from django.urls import path
 
 from plane.app.views.integration import (
     GithubConnectionEndpoint,
+    GithubCredentialsEndpoint,
     GithubInstallationRepositoriesEndpoint,
     IssueGithubLinkDetailEndpoint,
     IssueGithubLinksEndpoint,
@@ -19,6 +20,11 @@ urlpatterns = [
         "workspaces/<str:slug>/integrations/github/",
         GithubConnectionEndpoint.as_view(),
         name="github-connection",
+    ),
+    path(
+        "workspaces/<str:slug>/integrations/github/credentials/",
+        GithubCredentialsEndpoint.as_view(),
+        name="github-credentials",
     ),
     path(
         "workspaces/<str:slug>/integrations/github/repositories/",

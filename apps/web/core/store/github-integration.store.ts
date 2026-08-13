@@ -11,6 +11,7 @@ import { computedFn } from "mobx-utils";
 import {
   GithubIntegrationService,
   type TGithubConnectionStatus,
+  type TGithubCredentialsPayload,
   type TGithubInstallationRepo,
   type TGithubIssueLinks,
   type TGithubProjectRepository,
@@ -31,6 +32,7 @@ export interface IGithubIntegrationStore {
   getIssueLinks: (issueId: string | null | undefined) => TGithubIssueLinks | undefined;
   // actions
   fetchConnectionStatus: (workspaceSlug: string) => Promise<TGithubConnectionStatus>;
+  saveCredentials: (workspaceSlug: string, payload: TGithubCredentialsPayload) => Promise<void>;
   connect: (workspaceSlug: string, installationId: string) => Promise<void>;
   disconnect: (workspaceSlug: string) => Promise<void>;
   fetchInstallationRepositories: (workspaceSlug: string) => Promise<TGithubInstallationRepo[]>;
@@ -80,8 +82,15 @@ export class GithubIntegrationStore implements IGithubIntegrationStore {
   }
 
   get isConnected() {
-    return !!this.connectionStatus?.connection;
+    return !!this.connectionStatus?.is_installed;
   }
+
+  saveCredentials = async (workspaceSlug: string, payload: TGithubCredentialsPayload) => {
+    const status = await this.service.saveCredentials(workspaceSlug, payload);
+    runInAction(() => {
+      this.connectionStatus = status;
+    });
+  };
 
   getProjectRepositories = computedFn((projectId: string | null | undefined) =>
     projectId ? this.projectRepositoriesMap[projectId] : undefined

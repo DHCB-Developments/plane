@@ -12,7 +12,10 @@ import { APIService } from "@/services/api.service";
 // packages rebuild while the vite dev server is running.
 export type TGithubConnectionStatus = {
   is_app_configured: boolean;
+  is_installed: boolean;
   app_slug: string | null;
+  webhook_url: string;
+  setup_url: string;
   connection: {
     id: string;
     workspace: string;
@@ -24,6 +27,13 @@ export type TGithubConnectionStatus = {
     };
     created_at: string;
   } | null;
+};
+
+export type TGithubCredentialsPayload = {
+  app_id: string;
+  app_slug: string;
+  private_key?: string;
+  webhook_secret?: string;
 };
 
 export type TGithubInstallationRepo = {
@@ -103,6 +113,17 @@ export class GithubIntegrationService extends APIService {
 
   async getConnection(workspaceSlug: string): Promise<TGithubConnectionStatus> {
     return this.get(`/api/workspaces/${workspaceSlug}/integrations/github/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async saveCredentials(
+    workspaceSlug: string,
+    payload: TGithubCredentialsPayload
+  ): Promise<TGithubConnectionStatus> {
+    return this.post(`/api/workspaces/${workspaceSlug}/integrations/github/credentials/`, payload)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

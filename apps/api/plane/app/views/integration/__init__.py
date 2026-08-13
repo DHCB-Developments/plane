@@ -4,6 +4,7 @@
 
 from .github import (
     GithubConnectionEndpoint,
+    GithubCredentialsEndpoint,
     GithubInstallationRepositoriesEndpoint,
 )
 from .links import (

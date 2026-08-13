@@ -78,7 +78,7 @@ def _pr_fields(pr):
 
 def _post_linkback(workspace_integration, repository, pr_number, issues):
     """One comment on the PR pointing back to the newly linked work items."""
-    from plane.utils.integrations.github import GithubAppClient, GithubApiError, GithubAppNotConfigured
+    from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for
 
     workspace_slug = workspace_integration.workspace.slug
     base_url = settings.WEB_URL.rstrip("/") if settings.WEB_URL else ""
@@ -90,7 +90,7 @@ def _post_linkback(workspace_integration, repository, pr_number, issues):
         )
     body = "🔗 Linked to Plane work item" + ("s" if len(lines) > 1 else "") + ":\n" + "\n".join(lines)
     try:
-        client = GithubAppClient(workspace_integration.metadata.get("installation_id"))
+        client = client_for(workspace_integration)
         owner, repo = repository.get("full_name", "/").split("/", 1)
         client.create_issue_comment(owner, repo, pr_number, body)
     except (GithubAppNotConfigured, GithubApiError, ValueError) as e:

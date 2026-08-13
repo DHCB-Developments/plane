@@ -14,6 +14,8 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { AlertModalCore } from "@plane/ui";
 // hooks
 import { useGithubIntegration } from "@/hooks/store/use-github-integration";
+// local imports
+import { GithubCredentialsModal } from "./credentials-modal";
 
 type TGithubConnectionCardProps = {
   workspaceSlug: string;
@@ -24,6 +26,7 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
   // states
   const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
   // store hooks
   const { connectionStatus, isConnected, fetchConnectionStatus, disconnect } = useGithubIntegration();
 
@@ -68,6 +71,11 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
 
   return (
     <>
+      <GithubCredentialsModal
+        workspaceSlug={workspaceSlug}
+        isOpen={isCredentialsModalOpen}
+        handleClose={() => setIsCredentialsModalOpen(false)}
+      />
       <AlertModalCore
         handleClose={() => setIsDisconnectModalOpen(false)}
         handleSubmit={() => void handleDisconnect()}
@@ -106,27 +114,34 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
                   repositories to projects from each project&apos;s settings.
                 </span>
               ) : connectionStatus?.is_app_configured ? (
-                "Connect repositories, link pull requests to work items, and keep their status in sync."
+                "Credentials saved. Install the app on your GitHub organization to finish connecting."
               ) : (
-                "The GitHub App is not configured on this instance yet. Add the app credentials in the instance settings to enable this integration."
+                "Register a GitHub App for your organization, then add its credentials here to enable this integration."
               )}
             </p>
           </div>
         </div>
-        {isConnected ? (
-          <Button variant="error-outline" size="base" onClick={() => setIsDisconnectModalOpen(true)}>
-            Disconnect
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            size="base"
-            disabled={!connectionStatus?.is_app_configured || !connectionStatus?.app_slug}
-            onClick={handleConnect}
-          >
-            Connect
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {connectionStatus && (
+            <Button variant="ghost" size="base" onClick={() => setIsCredentialsModalOpen(true)}>
+              {connectionStatus.is_app_configured ? "Edit credentials" : "Add credentials"}
+            </Button>
+          )}
+          {isConnected ? (
+            <Button variant="error-outline" size="base" onClick={() => setIsDisconnectModalOpen(true)}>
+              Disconnect
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="base"
+              disabled={!connectionStatus?.is_app_configured || !connectionStatus?.app_slug}
+              onClick={handleConnect}
+            >
+              Connect
+            </Button>
+          )}
+        </div>
       </div>
     </>
   );

@@ -13,14 +13,22 @@ import requests
 from django.core.cache import cache
 
 # Module imports
-from plane.license.utils.instance_value import get_configuration_value
+from plane.license.utils.encryption import decrypt_data, encrypt_data
 
 GITHUB_API_BASE = "https://api.github.com"
 INSTALLATION_TOKEN_CACHE_KEY = "github_app_installation_token_{installation_id}"
 
+# WorkspaceIntegration.config keys holding the workspace's GitHub App
+# credentials. config is never serialized to the frontend; the secret values
+# are additionally encrypted at rest.
+CONFIG_APP_ID = "app_id"
+CONFIG_APP_SLUG = "app_slug"
+CONFIG_PRIVATE_KEY = "private_key"
+CONFIG_WEBHOOK_SECRET = "webhook_secret"
+
 
 class GithubAppNotConfigured(Exception):
-    """Raised when the instance has no GitHub App credentials configured."""
+    """Raised when a workspace has no usable GitHub App credentials."""
 
 
 class GithubApiError(Exception):
@@ -29,22 +37,47 @@ class GithubApiError(Exception):
         self.status_code = status_code
 
 
-def get_github_app_config():
-    """Return (app_id, app_slug, private_key, webhook_secret) from instance config."""
-    app_id, app_slug, private_key, webhook_secret = get_configuration_value(
-        [
-            {"key": "GITHUB_APP_ID", "default": None},
-            {"key": "GITHUB_APP_SLUG", "default": None},
-            {"key": "GITHUB_APP_PRIVATE_KEY", "default": None},
-            {"key": "GITHUB_APP_WEBHOOK_SECRET", "default": None},
-        ]
+def store_workspace_github_credentials(workspace_integration, app_id, app_slug, private_key, webhook_secret):
+    """Encrypt and persist the workspace's GitHub App credentials."""
+    config = dict(workspace_integration.config or {})
+    config[CONFIG_APP_ID] = str(app_id)
+    config[CONFIG_APP_SLUG] = app_slug
+    if private_key:
+        config[CONFIG_PRIVATE_KEY] = encrypt_data(private_key)
+    if webhook_secret:
+        config[CONFIG_WEBHOOK_SECRET] = encrypt_data(webhook_secret)
+    workspace_integration.config = config
+    workspace_integration.save(update_fields=["config"])
+
+
+def get_workspace_github_credentials(workspace_integration):
+    """Return (app_id, app_slug, private_key, webhook_secret), decrypted."""
+    config = workspace_integration.config or {}
+    private_key = config.get(CONFIG_PRIVATE_KEY)
+    webhook_secret = config.get(CONFIG_WEBHOOK_SECRET)
+    return (
+        config.get(CONFIG_APP_ID),
+        config.get(CONFIG_APP_SLUG),
+        decrypt_data(private_key) if private_key else None,
+        decrypt_data(webhook_secret) if webhook_secret else None,
     )
-    return app_id, app_slug, private_key, webhook_secret
 
 
-def is_github_app_configured():
-    app_id, _, private_key, _ = get_github_app_config()
-    return bool(app_id and private_key)
+def has_workspace_github_credentials(workspace_integration):
+    config = workspace_integration.config or {}
+    return bool(config.get(CONFIG_APP_ID) and config.get(CONFIG_PRIVATE_KEY))
+
+
+def client_for(workspace_integration, installation_id=None):
+    """Build a GithubAppClient from a workspace's stored credentials."""
+    app_id, _, private_key, _ = get_workspace_github_credentials(workspace_integration)
+    if not (app_id and private_key):
+        raise GithubAppNotConfigured("GitHub App credentials are not configured for this workspace")
+    return GithubAppClient(
+        app_id,
+        private_key,
+        installation_id or (workspace_integration.metadata or {}).get("installation_id"),
+    )
 
 
 class GithubAppClient:
@@ -54,12 +87,11 @@ class GithubAppClient:
     50 minutes so concurrent workers reuse them instead of minting new ones.
     """
 
-    def __init__(self, installation_id):
-        app_id, _, private_key, _ = get_github_app_config()
+    def __init__(self, app_id, private_key, installation_id=None):
         if not (app_id and private_key):
-            raise GithubAppNotConfigured("GitHub App credentials are not configured on this instance")
+            raise GithubAppNotConfigured("GitHub App credentials are missing")
         self.app_id = app_id
-        # The key is pasted into config/env; tolerate escaped newlines.
+        # The key is pasted into a form; tolerate escaped newlines.
         self.private_key = private_key.replace("\\n", "\n")
         self.installation_id = installation_id
 

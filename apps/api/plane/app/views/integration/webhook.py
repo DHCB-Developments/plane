@@ -14,7 +14,7 @@ from rest_framework.response import Response
 
 # Module imports
 from plane.app.views.base import BaseAPIView
-from plane.utils.integrations.github import get_github_app_config
+from plane.utils.integrations.github import get_workspace_github_credentials
 
 # Events the integration reacts to; everything else is acknowledged and dropped.
 HANDLED_EVENTS = {
@@ -29,27 +29,18 @@ HANDLED_EVENTS = {
 
 
 class GithubWebhookEndpoint(BaseAPIView):
-    """Inbound GitHub App webhook. Verifies the HMAC signature, then hands the
-    event to a background task so GitHub gets its 2xx within the 10s window."""
+    """Inbound GitHub App webhook.
+
+    Credentials are stored per workspace, so the payload's installation id is
+    used only to pick the candidate workspace — its stored webhook secret must
+    then verify the HMAC signature before the event is trusted. Events that
+    resolve to no configured workspace are acknowledged and dropped.
+    """
 
     permission_classes = [AllowAny]
     authentication_classes = []  # signature IS the authentication; also disables CSRF
 
     def post(self, request):
-        _, _, _, webhook_secret = get_github_app_config()
-        if not webhook_secret:
-            return Response(
-                {"error": "GitHub App is not configured"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        signature = request.headers.get("X-Hub-Signature-256", "")
-        expected = (
-            "sha256="
-            + hmac.new(webhook_secret.encode("utf-8"), request.body, hashlib.sha256).hexdigest()
-        )
-        if not hmac.compare_digest(signature, expected):
-            return Response({"error": "invalid signature"}, status=status.HTTP_401_UNAUTHORIZED)
-
         event = request.headers.get("X-GitHub-Event", "")
         delivery_id = request.headers.get("X-GitHub-Delivery", "")
         if event not in HANDLED_EVENTS:
@@ -59,6 +50,37 @@ class GithubWebhookEndpoint(BaseAPIView):
             payload = json.loads(request.body.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             return Response({"error": "invalid payload"}, status=status.HTTP_400_BAD_REQUEST)
+
+        installation_id = str((payload.get("installation") or {}).get("id") or "")
+        if not installation_id:
+            return Response({"message": "no installation"}, status=status.HTTP_202_ACCEPTED)
+
+        from plane.db.models import WorkspaceIntegration
+
+        workspace_integration = (
+            WorkspaceIntegration.objects.filter(
+                integration__provider="github",
+                metadata__installation_id=installation_id,
+            )
+            .select_related("workspace")
+            .first()
+        )
+        if not workspace_integration:
+            # Unknown installation (e.g. the pre-connect "installation created"
+            # ping). Nothing to verify against — acknowledge and drop.
+            return Response({"message": "unknown installation"}, status=status.HTTP_202_ACCEPTED)
+
+        _, _, _, webhook_secret = get_workspace_github_credentials(workspace_integration)
+        if not webhook_secret:
+            return Response({"message": "workspace not configured"}, status=status.HTTP_202_ACCEPTED)
+
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        expected = (
+            "sha256="
+            + hmac.new(webhook_secret.encode("utf-8"), request.body, hashlib.sha256).hexdigest()
+        )
+        if not hmac.compare_digest(signature, expected):
+            return Response({"error": "invalid signature"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Imported lazily so a celery import problem can never break signature checking.
         from plane.bgtasks.github_event_task import process_github_event

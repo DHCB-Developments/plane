@@ -5,6 +5,9 @@
 # Python imports
 import uuid
 
+# Django imports
+from django.conf import settings
+
 # Third party imports
 from rest_framework import status
 from rest_framework.response import Response
@@ -16,10 +19,11 @@ from plane.app.views.base import BaseAPIView
 from plane.db.models import APIToken, Integration, User, Workspace, WorkspaceIntegration
 from plane.utils.integrations.github import (
     GithubApiError,
-    GithubAppClient,
     GithubAppNotConfigured,
-    get_github_app_config,
-    is_github_app_configured,
+    client_for,
+    get_workspace_github_credentials,
+    has_workspace_github_credentials,
+    store_workspace_github_credentials,
 )
 
 GITHUB_PROVIDER = "github"
@@ -35,25 +39,67 @@ def get_github_workspace_integration(workspace_slug):
     )
 
 
+def _ensure_workspace_integration(workspace):
+    """Get or create the workspace's GitHub integration row with its bot identity."""
+    integration, _ = Integration.objects.get_or_create(
+        provider=GITHUB_PROVIDER, defaults={"title": "GitHub", "verified": True}
+    )
+    workspace_integration = WorkspaceIntegration.objects.filter(
+        workspace=workspace, integration=integration
+    ).first()
+    if workspace_integration:
+        return workspace_integration
+    bot = User.objects.create(
+        username=uuid.uuid4().hex,
+        email=f"github-bot-{workspace.id}@bots.plane.internal",
+        first_name="GitHub",
+        last_name="Bot",
+        is_bot=True,
+        is_password_autoset=True,
+    )
+    api_token = APIToken.objects.create(
+        user=bot, user_type=1, is_service=True, workspace=workspace, label="GitHub integration bot"
+    )
+    return WorkspaceIntegration.objects.create(
+        workspace=workspace,
+        integration=integration,
+        actor=bot,
+        api_token=api_token,
+        metadata={},
+    )
+
+
+def _connection_payload(workspace_integration):
+    base_url = settings.WEB_URL.rstrip("/") if settings.WEB_URL else ""
+    is_configured = bool(workspace_integration and has_workspace_github_credentials(workspace_integration))
+    app_slug = None
+    if workspace_integration:
+        _, app_slug, _, _ = get_workspace_github_credentials(workspace_integration)
+    is_installed = bool(
+        workspace_integration and (workspace_integration.metadata or {}).get("installation_id")
+    )
+    return {
+        "is_app_configured": is_configured,
+        "is_installed": is_installed,
+        "app_slug": app_slug,
+        "webhook_url": f"{base_url}/api/webhooks/github/",
+        "setup_url": f"{base_url}/github-setup/",
+        "connection": (
+            WorkspaceIntegrationSerializer(workspace_integration).data
+            if workspace_integration and is_installed
+            else None
+        ),
+    }
+
+
 class GithubConnectionEndpoint(BaseAPIView):
     """Workspace-level GitHub App connection: status / connect / disconnect."""
 
     permission_classes = [WorkSpaceAdminPermission]
 
     def get(self, request, slug):
-        _, app_slug, _, _ = get_github_app_config()
-        workspace_integration = get_github_workspace_integration(slug)
         return Response(
-            {
-                "is_app_configured": is_github_app_configured(),
-                "app_slug": app_slug,
-                "connection": (
-                    WorkspaceIntegrationSerializer(workspace_integration).data
-                    if workspace_integration
-                    else None
-                ),
-            },
-            status=status.HTTP_200_OK,
+            _connection_payload(get_github_workspace_integration(slug)), status=status.HTTP_200_OK
         )
 
     def post(self, request, slug):
@@ -64,18 +110,24 @@ class GithubConnectionEndpoint(BaseAPIView):
                 {"error": "installation_id is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        if get_github_workspace_integration(slug):
+        workspace_integration = get_github_workspace_integration(slug)
+        if not workspace_integration or not has_workspace_github_credentials(workspace_integration):
+            return Response(
+                {"error": "Save the GitHub App credentials for this workspace first"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if (workspace_integration.metadata or {}).get("installation_id"):
             return Response(
                 {"error": "GitHub is already connected to this workspace"},
                 status=status.HTTP_409_CONFLICT,
             )
 
         try:
-            client = GithubAppClient(installation_id)
+            client = client_for(workspace_integration, installation_id=installation_id)
             installation = client.get_installation()
         except GithubAppNotConfigured:
             return Response(
-                {"error": "GitHub App credentials are not configured on this instance"},
+                {"error": "GitHub App credentials are missing for this workspace"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except GithubApiError:
@@ -84,43 +136,17 @@ class GithubConnectionEndpoint(BaseAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        workspace = Workspace.objects.get(slug=slug)
         account = installation.get("account") or {}
+        workspace_integration.metadata = {
+            **(workspace_integration.metadata or {}),
+            "installation_id": str(installation_id),
+            "account_login": account.get("login"),
+            "account_type": account.get("type"),
+            "account_avatar_url": account.get("avatar_url"),
+        }
+        workspace_integration.save(update_fields=["metadata"])
 
-        integration, _ = Integration.objects.get_or_create(
-            provider=GITHUB_PROVIDER, defaults={"title": "GitHub", "verified": True}
-        )
-
-        # Bot identity that owns integration-driven activity (comments, transitions).
-        bot = User.objects.create(
-            username=uuid.uuid4().hex,
-            email=f"github-bot-{workspace.id}@bots.plane.internal",
-            first_name="GitHub",
-            last_name="Bot",
-            is_bot=True,
-            is_password_autoset=True,
-        )
-        api_token = APIToken.objects.create(
-            user=bot, user_type=1, is_service=True, workspace=workspace, label="GitHub integration bot"
-        )
-
-        workspace_integration = WorkspaceIntegration.objects.create(
-            workspace=workspace,
-            integration=integration,
-            actor=bot,
-            api_token=api_token,
-            metadata={
-                "installation_id": str(installation_id),
-                "account_login": account.get("login"),
-                "account_type": account.get("type"),
-                "account_avatar_url": account.get("avatar_url"),
-            },
-        )
-
-        return Response(
-            WorkspaceIntegrationSerializer(workspace_integration).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(_connection_payload(workspace_integration), status=status.HTTP_201_CREATED)
 
     def delete(self, request, slug):
         workspace_integration = get_github_workspace_integration(slug)
@@ -134,6 +160,40 @@ class GithubConnectionEndpoint(BaseAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class GithubCredentialsEndpoint(BaseAPIView):
+    """Save / update the workspace's GitHub App credentials (admin-entered)."""
+
+    permission_classes = [WorkSpaceAdminPermission]
+
+    def post(self, request, slug):
+        app_id = request.data.get("app_id")
+        app_slug = request.data.get("app_slug")
+        private_key = request.data.get("private_key")
+        webhook_secret = request.data.get("webhook_secret")
+
+        workspace_integration = get_github_workspace_integration(slug)
+        is_update = bool(workspace_integration and has_workspace_github_credentials(workspace_integration))
+        # On first save everything is required; on update blank secrets mean "keep".
+        if not (app_id and app_slug) or (not is_update and not (private_key and webhook_secret)):
+            return Response(
+                {"error": "app_id, app_slug, private_key and webhook_secret are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if private_key and "PRIVATE KEY" not in private_key:
+            return Response(
+                {"error": "The private key should be the full PEM file contents"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        workspace = Workspace.objects.get(slug=slug)
+        workspace_integration = _ensure_workspace_integration(workspace)
+        store_workspace_github_credentials(
+            workspace_integration, app_id, app_slug, private_key, webhook_secret
+        )
+        return Response(_connection_payload(workspace_integration), status=status.HTTP_200_OK)
+
+
 class GithubInstallationRepositoriesEndpoint(BaseAPIView):
     """The workspace's repo pool: everything the GitHub App installation can see."""
 
@@ -141,13 +201,13 @@ class GithubInstallationRepositoriesEndpoint(BaseAPIView):
 
     def get(self, request, slug):
         workspace_integration = get_github_workspace_integration(slug)
-        if not workspace_integration:
+        if not workspace_integration or not (workspace_integration.metadata or {}).get("installation_id"):
             return Response(
                 {"error": "GitHub is not connected to this workspace"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         try:
-            client = GithubAppClient(workspace_integration.metadata.get("installation_id"))
+            client = client_for(workspace_integration)
             repositories = client.list_repositories()
         except (GithubAppNotConfigured, GithubApiError):
             return Response(
