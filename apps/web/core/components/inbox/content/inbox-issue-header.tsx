@@ -38,7 +38,7 @@ import { useAppRouter } from "@/hooks/use-app-router";
 // store
 import type { IInboxIssueStore } from "@/store/inbox/inbox-issue.store";
 // local imports
-import { IssueIdentifier } from "@/plane-web/components/issues/issue-details/issue-identifier";
+import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 import { InboxIssueStatus } from "../inbox-issue-status";
 import { DeclineIssueModal } from "../modals/decline-issue-modal";
 import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
