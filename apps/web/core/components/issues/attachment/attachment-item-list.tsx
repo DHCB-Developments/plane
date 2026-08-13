@@ -22,6 +22,7 @@ import type { TAttachmentHelpers } from "../issue-detail-widgets/attachments/hel
 // components
 import { IssueAttachmentsListItem } from "./attachment-list-item";
 import { IssueAttachmentsUploadItem } from "./attachment-list-upload-item";
+import { IssueAttachmentPreviewModal } from "./attachment-preview-modal";
 // types
 import { IssueAttachmentDeleteModal } from "./delete-attachment-modal";
 
@@ -46,6 +47,7 @@ export const IssueAttachmentItemList = observer(function IssueAttachmentItemList
   const { t } = useTranslation();
   // states
   const [isUploading, setIsUploading] = useState(false);
+  const [previewAttachmentId, setPreviewAttachmentId] = useState<string | null>(null);
   // store hooks
   const {
     attachment: { getAttachmentsByIssueId },
@@ -117,6 +119,14 @@ export const IssueAttachmentItemList = observer(function IssueAttachmentItemList
       ))}
       {issueAttachments && (
         <>
+          {previewAttachmentId && (
+            <IssueAttachmentPreviewModal
+              attachmentIds={issueAttachments}
+              initialAttachmentId={previewAttachmentId}
+              onClose={() => setPreviewAttachmentId(null)}
+              issueServiceType={issueServiceType}
+            />
+          )}
           {attachmentDeleteModalId && (
             <IssueAttachmentDeleteModal
               isOpen={Boolean(attachmentDeleteModalId)}
@@ -147,6 +157,7 @@ export const IssueAttachmentItemList = observer(function IssueAttachmentItemList
                 attachmentId={attachmentId}
                 disabled={disabled}
                 issueServiceType={issueServiceType}
+                onPreview={setPreviewAttachmentId}
               />
             ))}
           </div>
