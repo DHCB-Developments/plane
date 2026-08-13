@@ -28,7 +28,15 @@ const INSERT_ITEMS: ToolbarMenuItem<"callout" | "divider" | "emoji">[] = [
 ];
 
 // flat, ordered list of all button actions; what doesn't fit goes into the "..." menu
-const ALL_BUTTON_ITEMS: ToolbarMenuItem[] = [...Object.values(TOOLBAR_ITEMS.document).flat(), ...INSERT_ITEMS];
+// (image is swapped into quote's slot so it stays visible before the bar collapses)
+const ALL_BUTTON_ITEMS: ToolbarMenuItem[] = (() => {
+  const items = [...Object.values(TOOLBAR_ITEMS.document).flat(), ...INSERT_ITEMS];
+  const quoteIndex = items.findIndex((item) => item.itemKey === "quote");
+  const imageIndex = items.findIndex((item) => item.itemKey === "image");
+  if (quoteIndex !== -1 && imageIndex !== -1)
+    [items[quoteIndex], items[imageIndex]] = [items[imageIndex], items[quoteIndex]];
+  return items;
+})();
 
 // px budget used to compute how many buttons fit in the available row width
 const BUTTON_WIDTH = 36; // size-8 button + gap
