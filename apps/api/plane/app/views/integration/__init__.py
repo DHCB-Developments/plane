@@ -12,4 +12,5 @@ from .links import (
     ProjectRepositoryPullRequestsEndpoint,
 )
 from .repository import ProjectGithubRepositoryViewSet
+from .settings import ProjectGithubSettingsEndpoint
 from .webhook import GithubWebhookEndpoint

@@ -10,6 +10,7 @@ from plane.app.views.integration import (
     IssueGithubLinkDetailEndpoint,
     IssueGithubLinksEndpoint,
     ProjectGithubRepositoryViewSet,
+    ProjectGithubSettingsEndpoint,
     ProjectRepositoryPullRequestsEndpoint,
 )
 
@@ -48,5 +49,10 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/github-repositories/<uuid:pk>/pull-requests/",
         ProjectRepositoryPullRequestsEndpoint.as_view(),
         name="project-github-repository-pull-requests",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/github-settings/",
+        ProjectGithubSettingsEndpoint.as_view(),
+        name="project-github-settings",
     ),
 ]

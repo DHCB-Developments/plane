@@ -185,6 +185,29 @@ export class GithubIntegrationService extends APIService {
       });
   }
 
+  async getProjectSettings(
+    workspaceSlug: string,
+    projectId: string
+  ): Promise<{ automation: Record<string, string | null>; branch_format: string }> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-settings/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async updateProjectSettings(
+    workspaceSlug: string,
+    projectId: string,
+    payload: { automation?: Record<string, string | null>; branch_format?: string }
+  ): Promise<{ automation: Record<string, string | null>; branch_format: string }> {
+    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-settings/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
   async searchRepositoryPullRequests(
     workspaceSlug: string,
     projectId: string,

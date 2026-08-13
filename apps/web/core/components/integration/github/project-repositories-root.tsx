@@ -22,6 +22,7 @@ import { useGithubIntegration } from "@/hooks/store/use-github-integration";
 import type { TGithubProjectRepository } from "@/services/integrations/github-integration.service";
 // local imports
 import { AddRepositoryModal } from "./add-repository-modal";
+import { GithubAutomationSettings } from "./automation-settings";
 
 type TProjectGithubRepositoriesRootProps = {
   workspaceSlug: string;
@@ -218,6 +219,7 @@ export const ProjectGithubRepositoriesRoot = observer(function ProjectGithubRepo
           })
         )}
       </div>
+      <GithubAutomationSettings workspaceSlug={workspaceSlug} projectId={projectId} />
     </>
   );
 });

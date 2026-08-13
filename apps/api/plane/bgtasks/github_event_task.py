@@ -98,6 +98,77 @@ def _post_linkback(workspace_integration, repository, pr_number, issues):
         log_exception(e)
 
 
+def _automation_event_for_state(pr_state):
+    return {
+        "draft": "draft_pr",
+        "open": "open_pr",
+        "merged": "pr_merged",
+        "closed": "pr_closed",
+    }.get(pr_state)
+
+
+def _apply_state_automation(workspace_integration, repository_id, pr_number, event_key=None):
+    """Move linked work items per their project's automation mapping.
+
+    Rules: relation links never automate; only closing links complete on merge,
+    and only once every other closing PR on the item is merged/closed
+    (the multi-PR guard).
+    """
+    import time as time_module
+
+    from plane.db.models import GithubProjectSettings, GithubPullRequestLink, Issue, IssueActivity, State
+
+    links = GithubPullRequestLink.objects.filter(
+        workspace_id=workspace_integration.workspace_id,
+        repository_id=repository_id,
+        pr_number=pr_number,
+    ).exclude(link_type="relation")
+
+    for link in links:
+        settings_row = GithubProjectSettings.objects.filter(project_id=link.project_id).first()
+        automation = (settings_row.automation if settings_row else None) or {}
+        key = event_key or _automation_event_for_state(link.state)
+        if not key:
+            continue
+        if key == "pr_merged":
+            if link.link_type != "closing":
+                continue
+            blocking = (
+                GithubPullRequestLink.objects.filter(issue_id=link.issue_id, link_type="closing")
+                .exclude(pk=link.pk)
+                .exclude(state__in=["merged", "closed"])
+                .exists()
+            )
+            if blocking:
+                continue
+        target_state_id = automation.get(key)
+        if not target_state_id:
+            continue
+        target_state = State.objects.filter(pk=target_state_id, project_id=link.project_id).first()
+        if not target_state:
+            continue
+        issue = Issue.objects.filter(pk=link.issue_id).first()
+        if not issue or str(issue.state_id) == str(target_state.id):
+            continue
+        old_state = State.objects.filter(pk=issue.state_id).first()
+        issue.state_id = target_state.id
+        issue.save(update_fields=["state_id", "updated_at"])
+        IssueActivity.objects.create(
+            issue_id=issue.id,
+            actor_id=workspace_integration.actor_id,
+            verb="updated",
+            old_value=old_state.name if old_state else None,
+            new_value=target_state.name,
+            field="state",
+            project_id=link.project_id,
+            workspace_id=workspace_integration.workspace_id,
+            comment=f"updated the state to (GitHub: {link.repo_full_name}#{link.pr_number})",
+            old_identifier=old_state.id if old_state else None,
+            new_identifier=target_state.id,
+            epoch=int(time_module.time()),
+        )
+
+
 def _handle_pull_request_event(workspace_integration, payload):
     from plane.db.models import GithubPullRequestLink
     from plane.utils.integrations.github_refs import parse_branch_references, parse_text_references
@@ -159,6 +230,8 @@ def _handle_pull_request_event(workspace_integration, payload):
     if newly_linked:
         _post_linkback(workspace_integration, repository, pr_number, newly_linked)
 
+    _apply_state_automation(workspace_integration, repository_id, pr_number)
+
 
 def _handle_pull_request_review_event(workspace_integration, payload):
     from plane.db.models import GithubPullRequestLink
@@ -174,6 +247,9 @@ def _handle_pull_request_review_event(workspace_integration, payload):
         repository_id=repository_id,
         pr_number=pr.get("number"),
     ).update(review_state=state, last_event_at=datetime.now(timezone.utc))
+
+    if state == "approved":
+        _apply_state_automation(workspace_integration, repository_id, pr.get("number"), event_key="pr_approved")
 
 
 def _handle_check_suite_event(workspace_integration, payload):
