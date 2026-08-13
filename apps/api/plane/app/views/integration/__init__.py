@@ -6,4 +6,5 @@ from .github import (
     GithubConnectionEndpoint,
     GithubInstallationRepositoriesEndpoint,
 )
+from .repository import ProjectGithubRepositoryViewSet
 from .webhook import GithubWebhookEndpoint
