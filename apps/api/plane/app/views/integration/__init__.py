@@ -6,6 +6,10 @@ from .github import (
     GithubConnectionEndpoint,
     GithubInstallationRepositoriesEndpoint,
 )
-from .links import IssueGithubLinksEndpoint
+from .links import (
+    IssueGithubLinkDetailEndpoint,
+    IssueGithubLinksEndpoint,
+    ProjectRepositoryPullRequestsEndpoint,
+)
 from .repository import ProjectGithubRepositoryViewSet
 from .webhook import GithubWebhookEndpoint

@@ -7,8 +7,10 @@ from django.urls import path
 from plane.app.views.integration import (
     GithubConnectionEndpoint,
     GithubInstallationRepositoriesEndpoint,
+    IssueGithubLinkDetailEndpoint,
     IssueGithubLinksEndpoint,
     ProjectGithubRepositoryViewSet,
+    ProjectRepositoryPullRequestsEndpoint,
 )
 
 urlpatterns = [
@@ -36,5 +38,15 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/github-links/",
         IssueGithubLinksEndpoint.as_view(),
         name="issue-github-links",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/github-links/<uuid:pk>/",
+        IssueGithubLinkDetailEndpoint.as_view(),
+        name="issue-github-link-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/github-repositories/<uuid:pk>/pull-requests/",
+        ProjectRepositoryPullRequestsEndpoint.as_view(),
+        name="project-github-repository-pull-requests",
     ),
 ]

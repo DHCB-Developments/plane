@@ -87,6 +87,15 @@ export type TGithubIssueLinks = {
   branches: TGithubBranchLink[];
 };
 
+export type TGithubSearchPullRequest = {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+  author: string | null;
+  source_branch: string | null;
+};
+
 export class GithubIntegrationService extends APIService {
   constructor() {
     super(API_BASE_URL);
@@ -170,6 +179,45 @@ export class GithubIntegrationService extends APIService {
 
   async detachRepository(workspaceSlug: string, projectId: string, repositoryId: string): Promise<void> {
     return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async searchRepositoryPullRequests(
+    workspaceSlug: string,
+    projectId: string,
+    repositoryId: string,
+    search?: string
+  ): Promise<TGithubSearchPullRequest[]> {
+    return this.get(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/pull-requests/`,
+      { params: search ? { search } : undefined }
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async linkPullRequest(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    payload: { repository: string; pr_number: number }
+  ): Promise<TGithubPullRequestLink> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async unlinkPullRequest(workspaceSlug: string, projectId: string, issueId: string, linkId: string): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/${linkId}/`
+    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

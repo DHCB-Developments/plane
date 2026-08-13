@@ -43,6 +43,13 @@ export interface IGithubIntegrationStore {
   setDefaultRepository: (workspaceSlug: string, projectId: string, repositoryId: string) => Promise<void>;
   detachRepository: (workspaceSlug: string, projectId: string, repositoryId: string) => Promise<void>;
   fetchIssueLinks: (workspaceSlug: string, projectId: string, issueId: string) => Promise<TGithubIssueLinks>;
+  linkPullRequest: (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    payload: { repository: string; pr_number: number }
+  ) => Promise<void>;
+  unlinkPullRequest: (workspaceSlug: string, projectId: string, issueId: string, linkId: string) => Promise<void>;
 }
 
 export class GithubIntegrationStore implements IGithubIntegrationStore {
@@ -94,6 +101,21 @@ export class GithubIntegrationStore implements IGithubIntegrationStore {
       set(this.issueLinksMap, [issueId], links);
     });
     return links;
+  };
+
+  linkPullRequest = async (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    payload: { repository: string; pr_number: number }
+  ) => {
+    await this.service.linkPullRequest(workspaceSlug, projectId, issueId, payload);
+    await this.fetchIssueLinks(workspaceSlug, projectId, issueId);
+  };
+
+  unlinkPullRequest = async (workspaceSlug: string, projectId: string, issueId: string, linkId: string) => {
+    await this.service.unlinkPullRequest(workspaceSlug, projectId, issueId, linkId);
+    await this.fetchIssueLinks(workspaceSlug, projectId, issueId);
   };
 
   fetchConnectionStatus = async (workspaceSlug: string) => {

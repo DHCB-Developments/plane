@@ -4,8 +4,9 @@
  * See the LICENSE file for details.
  */
 
+import { useState } from "react";
 import { observer } from "mobx-react";
-import { Check, CircleDot, Copy, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, X } from "lucide-react";
+import { Check, CircleDot, Copy, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, Plus, X } from "lucide-react";
 import useSWR from "swr";
 // plane imports
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -18,6 +19,8 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
 // services
 import type { TGithubPullRequestLink } from "@/services/integrations/github-integration.service";
+// local imports
+import { LinkPullRequestModal } from "./link-pr-modal";
 
 type TGithubLinksSectionProps = {
   workspaceSlug: string;
@@ -43,8 +46,10 @@ function slugify(text: string) {
 
 export const GithubLinksSection = observer(function GithubLinksSection(props: TGithubLinksSectionProps) {
   const { workspaceSlug, projectId, issueId } = props;
+  // states
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   // store hooks
-  const { connectionStatus, isConnected, fetchConnectionStatus, getIssueLinks, fetchIssueLinks } =
+  const { connectionStatus, isConnected, fetchConnectionStatus, getIssueLinks, fetchIssueLinks, unlinkPullRequest } =
     useGithubIntegration();
   const { getProjectById } = useProject();
   const { data: currentUser } = useUser();
@@ -88,20 +93,47 @@ export const GithubLinksSection = observer(function GithubLinksSection(props: TG
     (branch) => !pullRequests.some((pr) => pr.source_branch === branch.branch_name)
   );
 
+  const handleUnlink = (linkId: string) => {
+    void unlinkPullRequest(workspaceSlug, projectId, issueId, linkId)
+      .then(() => setToast({ type: TOAST_TYPE.SUCCESS, title: "Pull request unlinked", message: "" }))
+      .catch(() =>
+        setToast({ type: TOAST_TYPE.ERROR, title: "Error", message: "Could not unlink the pull request." })
+      );
+  };
+
   return (
     <div className="border-t border-subtle-1 py-4">
+      <LinkPullRequestModal
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
+        isOpen={isLinkModalOpen}
+        handleClose={() => setIsLinkModalOpen(false)}
+      />
       <div className="flex items-center justify-between gap-2">
         <h5 className="text-13 font-medium text-secondary">GitHub</h5>
-        <Tooltip tooltipContent="Copy branch name">
-          <button
-            type="button"
-            onClick={handleCopyBranchName}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-11 font-medium text-tertiary hover:bg-layer-1 hover:text-secondary"
-          >
-            <Copy className="size-3" />
-            Copy branch name
-          </button>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip tooltipContent="Copy branch name">
+            <button
+              type="button"
+              onClick={handleCopyBranchName}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-11 font-medium text-tertiary hover:bg-layer-1 hover:text-secondary"
+            >
+              <Copy className="size-3" />
+              Copy branch name
+            </button>
+          </Tooltip>
+          <Tooltip tooltipContent="Link a pull request">
+            <button
+              type="button"
+              onClick={() => setIsLinkModalOpen(true)}
+              className="grid size-5 place-items-center rounded text-tertiary hover:bg-layer-1 hover:text-secondary"
+              aria-label="Link a pull request"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
       <div className="mt-2 flex flex-col gap-1.5">
         {pullRequests.length === 0 && branches.length === 0 && (
@@ -163,6 +195,20 @@ export const GithubLinksSection = observer(function GithubLinksSection(props: TG
                     <span className="text-11 font-medium text-danger-secondary">✕</span>
                   </Tooltip>
                 )}
+                <Tooltip tooltipContent="Unlink">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleUnlink(pr.id);
+                    }}
+                    className="hidden size-5 place-items-center rounded text-tertiary hover:bg-danger-subtle hover:text-danger-secondary group-hover:grid"
+                    aria-label="Unlink pull request"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Tooltip>
               </span>
             </a>
           );
