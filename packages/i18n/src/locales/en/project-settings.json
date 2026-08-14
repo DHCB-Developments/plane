@@ -521,6 +521,9 @@
           }
         }
       }
+    },
+    "github": {
+      "label": "GitHub"
     }
   }
 }

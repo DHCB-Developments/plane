@@ -70,6 +70,91 @@ class GithubIssueSync(ProjectBaseModel):
         ordering = ("-created_at",)
 
 
+class GithubPullRequestLink(ProjectBaseModel):
+    """A pull request linked to a work item. Repo details are denormalized so a
+    PR from any repo the workspace connection can see may link to any issue,
+    whether or not that repo is in the project's repo set."""
+
+    LINK_TYPE_CHOICES = (
+        ("closing", "Closing"),
+        ("reference", "Reference"),
+        ("relation", "Relation"),
+        ("manual", "Manual"),
+    )
+    STATE_CHOICES = (
+        ("draft", "Draft"),
+        ("open", "Open"),
+        ("merged", "Merged"),
+        ("closed", "Closed"),
+    )
+
+    issue = models.ForeignKey("db.Issue", related_name="github_pull_requests", on_delete=models.CASCADE)
+    repository_id = models.BigIntegerField()
+    repo_full_name = models.CharField(max_length=500)
+    pr_number = models.IntegerField()
+    title = models.CharField(max_length=1000, blank=True)
+    url = models.URLField(blank=True)
+    state = models.CharField(max_length=20, choices=STATE_CHOICES, default="open")
+    review_state = models.CharField(max_length=30, blank=True)
+    checks_state = models.CharField(max_length=30, blank=True)
+    author = models.CharField(max_length=255, blank=True)
+    author_avatar = models.URLField(blank=True)
+    source_branch = models.CharField(max_length=500, blank=True)
+    target_branch = models.CharField(max_length=500, blank=True)
+    link_type = models.CharField(max_length=20, choices=LINK_TYPE_CHOICES, default="reference")
+    last_event_at = models.DateTimeField(null=True)
+    metadata = models.JSONField(default=dict)
+
+    def __str__(self):
+        """Return the linked PR"""
+        return f"{self.repo_full_name}#{self.pr_number}"
+
+    class Meta:
+        unique_together = ["issue", "repository_id", "pr_number", "deleted_at"]
+        verbose_name = "Github Pull Request Link"
+        verbose_name_plural = "Github Pull Request Links"
+        db_table = "github_pull_request_links"
+        ordering = ("-created_at",)
+
+
+class GithubBranchLink(ProjectBaseModel):
+    issue = models.ForeignKey("db.Issue", related_name="github_branches", on_delete=models.CASCADE)
+    repository_id = models.BigIntegerField()
+    repo_full_name = models.CharField(max_length=500)
+    branch_name = models.CharField(max_length=500)
+    url = models.URLField(blank=True)
+
+    def __str__(self):
+        """Return the linked branch"""
+        return f"{self.repo_full_name}:{self.branch_name}"
+
+    class Meta:
+        unique_together = ["issue", "repository_id", "branch_name", "deleted_at"]
+        verbose_name = "Github Branch Link"
+        verbose_name_plural = "Github Branch Links"
+        db_table = "github_branch_links"
+        ordering = ("-created_at",)
+
+
+class GithubProjectSettings(ProjectBaseModel):
+    """Per-project integration behavior: the PR-event -> work item state
+    automation mapping (M5) and the branch name template."""
+
+    automation = models.JSONField(default=dict)
+    branch_format = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        """Return the project"""
+        return f"{self.project_id}"
+
+    class Meta:
+        unique_together = ["project", "deleted_at"]
+        verbose_name = "Github Project Settings"
+        verbose_name_plural = "Github Project Settings"
+        db_table = "github_project_settings"
+        ordering = ("-created_at",)
+
+
 class GithubCommentSync(ProjectBaseModel):
     repo_comment_id = models.BigIntegerField()
     comment = models.ForeignKey("db.IssueComment", related_name="comment_syncs", on_delete=models.CASCADE)
