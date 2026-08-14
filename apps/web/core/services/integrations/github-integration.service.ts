@@ -1,0 +1,279 @@
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { API_BASE_URL } from "@plane/constants";
+// services
+import { APIService } from "@/services/api.service";
+
+// Types live here (not in @plane/types) so editing them never requires a
+// packages rebuild while the vite dev server is running.
+export type TGithubInstallation = {
+  installation_id: string;
+  account_login: string | null;
+  account_type: string | null;
+  account_avatar_url: string | null;
+};
+
+export type TGithubConnectionStatus = {
+  is_app_configured: boolean;
+  is_installed: boolean;
+  app_slug: string | null;
+  webhook_url: string;
+  setup_url: string;
+  installations: TGithubInstallation[];
+  connection: {
+    id: string;
+    workspace: string;
+    metadata: {
+      installation_id?: string;
+      account_login?: string;
+      account_type?: string;
+      account_avatar_url?: string;
+    };
+    created_at: string;
+  } | null;
+};
+
+export type TGithubCredentialsPayload = {
+  app_id: string;
+  app_slug: string;
+  private_key?: string;
+  webhook_secret?: string;
+};
+
+export type TGithubInstallationRepo = {
+  repository_id: number;
+  name: string;
+  full_name: string;
+  owner: string;
+  url: string;
+  private: boolean;
+  default_branch: string | null;
+};
+
+export type TGithubProjectRepository = {
+  id: string;
+  project: string;
+  workspace: string;
+  name: string;
+  owner: string;
+  url: string | null;
+  repository_id: number;
+  config: {
+    full_name?: string;
+    default_branch?: string;
+    is_default?: boolean;
+  };
+  created_at: string;
+};
+
+export type TGithubPullRequestLink = {
+  id: string;
+  issue: string;
+  repository_id: number;
+  repo_full_name: string;
+  pr_number: number;
+  title: string;
+  url: string;
+  state: "draft" | "open" | "merged" | "closed";
+  review_state: string;
+  checks_state: string;
+  author: string;
+  author_avatar: string;
+  source_branch: string;
+  target_branch: string;
+  link_type: "closing" | "reference" | "relation" | "manual";
+  last_event_at: string | null;
+  created_at: string;
+};
+
+export type TGithubBranchLink = {
+  id: string;
+  issue: string;
+  repository_id: number;
+  repo_full_name: string;
+  branch_name: string;
+  url: string;
+  created_at: string;
+};
+
+export type TGithubIssueLinks = {
+  pull_requests: TGithubPullRequestLink[];
+  branches: TGithubBranchLink[];
+};
+
+export type TGithubSearchPullRequest = {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+  author: string | null;
+  source_branch: string | null;
+};
+
+export class GithubIntegrationService extends APIService {
+  constructor() {
+    super(API_BASE_URL);
+  }
+
+  async getConnection(workspaceSlug: string): Promise<TGithubConnectionStatus> {
+    return this.get(`/api/workspaces/${workspaceSlug}/integrations/github/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async saveCredentials(
+    workspaceSlug: string,
+    payload: TGithubCredentialsPayload
+  ): Promise<TGithubConnectionStatus> {
+    return this.post(`/api/workspaces/${workspaceSlug}/integrations/github/credentials/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async connect(workspaceSlug: string, installationId: string): Promise<TGithubConnectionStatus["connection"]> {
+    return this.post(`/api/workspaces/${workspaceSlug}/integrations/github/`, {
+      installation_id: installationId,
+    })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async disconnect(workspaceSlug: string, installationId?: string): Promise<void> {
+    const query = installationId ? `?installation_id=${installationId}` : "";
+    return this.delete(`/api/workspaces/${workspaceSlug}/integrations/github/${query}`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getInstallationRepositories(workspaceSlug: string): Promise<TGithubInstallationRepo[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/integrations/github/repositories/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getProjectRepositories(workspaceSlug: string, projectId: string): Promise<TGithubProjectRepository[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async attachRepository(
+    workspaceSlug: string,
+    projectId: string,
+    payload: Partial<TGithubInstallationRepo>
+  ): Promise<TGithubProjectRepository> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async setDefaultRepository(
+    workspaceSlug: string,
+    projectId: string,
+    repositoryId: string
+  ): Promise<TGithubProjectRepository> {
+    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/`, {
+      is_default: true,
+    })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getIssueLinks(workspaceSlug: string, projectId: string, issueId: string): Promise<TGithubIssueLinks> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async detachRepository(workspaceSlug: string, projectId: string, repositoryId: string): Promise<void> {
+    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getProjectSettings(
+    workspaceSlug: string,
+    projectId: string
+  ): Promise<{ automation: Record<string, string | null>; branch_format: string }> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-settings/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async updateProjectSettings(
+    workspaceSlug: string,
+    projectId: string,
+    payload: { automation?: Record<string, string | null>; branch_format?: string }
+  ): Promise<{ automation: Record<string, string | null>; branch_format: string }> {
+    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/github-settings/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async searchRepositoryPullRequests(
+    workspaceSlug: string,
+    projectId: string,
+    repositoryId: string,
+    search?: string
+  ): Promise<TGithubSearchPullRequest[]> {
+    return this.get(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/github-repositories/${repositoryId}/pull-requests/`,
+      { params: search ? { search } : undefined }
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async linkPullRequest(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    payload: { repository: string; pr_number: number }
+  ): Promise<TGithubPullRequestLink> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/`, payload)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async unlinkPullRequest(workspaceSlug: string, projectId: string, issueId: string, linkId: string): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/github-links/${linkId}/`
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+}

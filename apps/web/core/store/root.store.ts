@@ -21,6 +21,8 @@ import { CommandPaletteStore } from "@/store/base-command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import type { ITimelineStore } from "./timeline/timeline.store";
 import { TimeLineStore } from "./timeline/timeline.store";
+import type { IGithubIntegrationStore } from "./github-integration.store";
+import { GithubIntegrationStore } from "./github-integration.store";
 import type { IIssueTypesStore } from "./issue-types.store";
 import { IssueTypesStore } from "./issue-types.store";
 // stores
@@ -106,6 +108,7 @@ export class CoreRootStore {
   powerK: IPowerKStore;
   timelineStore: ITimelineStore;
   issueTypes: IIssueTypesStore;
+  githubIntegration: IGithubIntegrationStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -139,6 +142,7 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
     this.timelineStore = new TimeLineStore(this);
     this.issueTypes = new IssueTypesStore(this);
+    this.githubIntegration = new GithubIntegrationStore(this);
   }
 
   resetOnSignOut() {
@@ -174,6 +178,7 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
     this.timelineStore = new TimeLineStore(this);
     this.issueTypes = new IssueTypesStore(this);
+    this.githubIntegration = new GithubIntegrationStore(this);
   }
 }
 

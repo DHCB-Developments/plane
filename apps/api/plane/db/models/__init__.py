@@ -20,8 +20,11 @@ from .exporter import ExporterHistory
 from .importer import Importer
 from .intake import Intake, IntakeIssue
 from .integration import (
+    GithubBranchLink,
     GithubCommentSync,
     GithubIssueSync,
+    GithubProjectSettings,
+    GithubPullRequestLink,
     GithubRepository,
     GithubRepositorySync,
     Integration,

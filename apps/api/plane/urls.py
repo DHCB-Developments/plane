@@ -13,9 +13,13 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from plane.app.views.integration import GithubWebhookEndpoint
+
 handler404 = "plane.app.views.error_404.custom_404_view"
 
 urlpatterns = [
+    # Inbound GitHub App webhook (public path, HMAC-verified).
+    path("api/webhooks/github/", GithubWebhookEndpoint.as_view(), name="github-webhook"),
     path("api/", include("plane.app.urls")),
     path("api/public/", include("plane.space.urls")),
     path("api/instances/", include("plane.license.urls")),
