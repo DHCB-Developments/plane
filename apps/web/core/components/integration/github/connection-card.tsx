@@ -6,14 +6,17 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { Github } from "lucide-react";
+import { Github, Plus, X } from "lucide-react";
 import useSWR from "swr";
 // plane imports
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { Tooltip } from "@plane/propel/tooltip";
 import { AlertModalCore } from "@plane/ui";
 // hooks
 import { useGithubIntegration } from "@/hooks/store/use-github-integration";
+// services
+import type { TGithubInstallation } from "@/services/integrations/github-integration.service";
 // local imports
 import { GithubCredentialsModal } from "./credentials-modal";
 
@@ -24,8 +27,8 @@ type TGithubConnectionCardProps = {
 export const GithubConnectionCard = observer(function GithubConnectionCard(props: TGithubConnectionCardProps) {
   const { workspaceSlug } = props;
   // states
-  const [isDisconnectModalOpen, setIsDisconnectModalOpen] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [installationToRemove, setInstallationToRemove] = useState<TGithubInstallation | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
   // store hooks
   const { connectionStatus, isConnected, fetchConnectionStatus, disconnect } = useGithubIntegration();
@@ -36,7 +39,7 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
     { revalidateOnFocus: true }
   );
 
-  const handleConnect = () => {
+  const handleInstall = () => {
     if (!connectionStatus?.app_slug) return;
     // GitHub forwards the state param to the app's Setup URL after install.
     window.open(
@@ -45,29 +48,29 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
     );
   };
 
-  const handleDisconnect = async () => {
-    setIsDisconnecting(true);
+  const handleRemoveInstallation = async () => {
+    if (!installationToRemove) return;
+    setIsRemoving(true);
     try {
-      await disconnect(workspaceSlug);
+      await disconnect(workspaceSlug, installationToRemove.installation_id);
       setToast({
         type: TOAST_TYPE.SUCCESS,
-        title: "GitHub disconnected",
-        message: "The workspace is no longer connected to GitHub.",
+        title: "Organization disconnected",
+        message: `${installationToRemove.account_login ?? "The organization"} is no longer connected. Also uninstall the app from the organization on GitHub.`,
       });
-      setIsDisconnectModalOpen(false);
+      setInstallationToRemove(null);
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Could not disconnect",
-        message: "Something went wrong while disconnecting GitHub. Please try again.",
+        message: "Something went wrong while disconnecting. Please try again.",
       });
     } finally {
-      setIsDisconnecting(false);
+      setIsRemoving(false);
     }
   };
 
-  const accountLogin = connectionStatus?.connection?.metadata?.account_login;
-  const accountAvatar = connectionStatus?.connection?.metadata?.account_avatar_url;
+  const installations = connectionStatus?.installations ?? [];
 
   return (
     <>
@@ -77,71 +80,101 @@ export const GithubConnectionCard = observer(function GithubConnectionCard(props
         handleClose={() => setIsCredentialsModalOpen(false)}
       />
       <AlertModalCore
-        handleClose={() => setIsDisconnectModalOpen(false)}
-        handleSubmit={() => void handleDisconnect()}
-        isSubmitting={isDisconnecting}
-        isOpen={isDisconnectModalOpen}
-        title="Disconnect GitHub"
+        handleClose={() => setInstallationToRemove(null)}
+        handleSubmit={() => void handleRemoveInstallation()}
+        isSubmitting={isRemoving}
+        isOpen={!!installationToRemove}
+        title="Disconnect organization"
         content={
           <>
-            Disconnecting removes the workspace&apos;s GitHub connection. Repositories added to projects and
-            existing pull request links stop updating until you connect again.
+            Disconnect <span className="font-medium">{installationToRemove?.account_login}</span> from this
+            workspace? Pull request links from its repositories stop updating, and its repositories disappear from
+            project pickers.
           </>
         }
         primaryButtonText={{ loading: "Disconnecting", default: "Disconnect" }}
       />
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-subtle-1 p-4">
-        <div className="flex items-center gap-4">
-          <div className="grid size-10 flex-shrink-0 place-items-center rounded-md bg-layer-1">
-            <Github className="size-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-14 font-medium">GitHub</h4>
-              {isConnected && (
-                <span className="rounded-full bg-success-subtle px-2 py-0.5 text-11 font-medium text-success-primary">
-                  Connected
-                </span>
-              )}
+      <div className="rounded-lg border border-subtle-1 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="grid size-10 flex-shrink-0 place-items-center rounded-md bg-layer-1">
+              <Github className="size-5" />
             </div>
-            <p className="text-12 text-tertiary">
-              {isConnected ? (
-                <span className="flex items-center gap-1.5">
-                  {accountAvatar && (
-                    <img src={accountAvatar} alt="" className="size-3.5 rounded-full" aria-hidden="true" />
-                  )}
-                  Connected to <span className="font-medium text-secondary">{accountLogin ?? "GitHub"}</span> — add
-                  repositories to projects from each project&apos;s settings.
-                </span>
-              ) : connectionStatus?.is_app_configured ? (
-                "Credentials saved. Install the app on your GitHub organization to finish connecting."
-              ) : (
-                "Register a GitHub App for your organization, then add its credentials here to enable this integration."
-              )}
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-14 font-medium">GitHub</h4>
+                {isConnected && (
+                  <span className="rounded-full bg-success-subtle px-2 py-0.5 text-11 font-medium text-success-primary">
+                    Connected
+                  </span>
+                )}
+              </div>
+              <p className="text-12 text-tertiary">
+                {isConnected
+                  ? "Add repositories to projects from each project's settings. Connect more organizations any time."
+                  : connectionStatus?.is_app_configured
+                    ? "Credentials saved. Install the app on your GitHub organization to finish connecting."
+                    : "Register a GitHub App for your organization, then add its credentials here to enable this integration."}
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {connectionStatus && (
+              <Button variant="ghost" size="base" onClick={() => setIsCredentialsModalOpen(true)}>
+                {connectionStatus.is_app_configured ? "Edit credentials" : "Add credentials"}
+              </Button>
+            )}
+            {!isConnected && (
+              <Button
+                variant="primary"
+                size="base"
+                disabled={!connectionStatus?.is_app_configured || !connectionStatus?.app_slug}
+                onClick={handleInstall}
+              >
+                Connect
+              </Button>
+            )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {connectionStatus && (
-            <Button variant="ghost" size="base" onClick={() => setIsCredentialsModalOpen(true)}>
-              {connectionStatus.is_app_configured ? "Edit credentials" : "Add credentials"}
-            </Button>
-          )}
-          {isConnected ? (
-            <Button variant="error-outline" size="base" onClick={() => setIsDisconnectModalOpen(true)}>
-              Disconnect
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="base"
-              disabled={!connectionStatus?.is_app_configured || !connectionStatus?.app_slug}
-              onClick={handleConnect}
+        {isConnected && (
+          <div className="mt-3 flex flex-col gap-1.5 border-t border-subtle-1 pt-3">
+            <p className="text-11 font-medium uppercase tracking-wide text-tertiary">Connected organizations</p>
+            {installations.map((installation) => (
+              <div
+                key={installation.installation_id}
+                className="flex items-center justify-between gap-2 rounded-md bg-layer-1 px-2.5 py-1.5"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {installation.account_avatar_url ? (
+                    <img src={installation.account_avatar_url} alt="" className="size-4 rounded" aria-hidden="true" />
+                  ) : (
+                    <Github className="size-4 text-tertiary" />
+                  )}
+                  <span className="truncate text-12 font-medium">{installation.account_login}</span>
+                  <span className="text-11 text-tertiary">{installation.account_type}</span>
+                </span>
+                <Tooltip tooltipContent="Disconnect organization">
+                  <button
+                    type="button"
+                    onClick={() => setInstallationToRemove(installation)}
+                    className="grid size-6 place-items-center rounded text-tertiary hover:bg-danger-subtle hover:text-danger-secondary"
+                    aria-label={`Disconnect ${installation.account_login}`}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </Tooltip>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={handleInstall}
+              className="flex items-center gap-1.5 rounded-md border border-dashed border-strong px-2.5 py-1.5 text-12 font-medium text-tertiary hover:bg-layer-1 hover:text-secondary"
             >
-              Connect
-            </Button>
-          )}
-        </div>
+              <Plus className="size-3.5" />
+              Connect another organization
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

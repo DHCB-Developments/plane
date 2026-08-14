@@ -55,12 +55,15 @@ class GithubWebhookEndpoint(BaseAPIView):
         if not installation_id:
             return Response({"message": "no installation"}, status=status.HTTP_202_ACCEPTED)
 
+        from django.db.models import Q
+
         from plane.db.models import WorkspaceIntegration
 
         workspace_integration = (
             WorkspaceIntegration.objects.filter(
+                Q(metadata__installation_id=installation_id)
+                | Q(metadata__installations__contains=[{"installation_id": installation_id}]),
                 integration__provider="github",
-                metadata__installation_id=installation_id,
             )
             .select_related("workspace")
             .first()

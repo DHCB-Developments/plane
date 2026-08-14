@@ -34,7 +34,7 @@ export interface IGithubIntegrationStore {
   fetchConnectionStatus: (workspaceSlug: string) => Promise<TGithubConnectionStatus>;
   saveCredentials: (workspaceSlug: string, payload: TGithubCredentialsPayload) => Promise<void>;
   connect: (workspaceSlug: string, installationId: string) => Promise<void>;
-  disconnect: (workspaceSlug: string) => Promise<void>;
+  disconnect: (workspaceSlug: string, installationId?: string) => Promise<void>;
   fetchInstallationRepositories: (workspaceSlug: string) => Promise<TGithubInstallationRepo[]>;
   fetchProjectRepositories: (workspaceSlug: string, projectId: string) => Promise<TGithubProjectRepository[]>;
   attachRepository: (
@@ -140,12 +140,10 @@ export class GithubIntegrationStore implements IGithubIntegrationStore {
     await this.fetchConnectionStatus(workspaceSlug);
   };
 
-  disconnect = async (workspaceSlug: string) => {
-    await this.service.disconnect(workspaceSlug);
-    runInAction(() => {
-      if (this.connectionStatus) this.connectionStatus = { ...this.connectionStatus, connection: null };
-      this.installationRepos = undefined;
-    });
+  disconnect = async (workspaceSlug: string, installationId?: string) => {
+    await this.service.disconnect(workspaceSlug, installationId);
+    this.installationRepos = undefined;
+    await this.fetchConnectionStatus(workspaceSlug);
   };
 
   fetchInstallationRepositories = async (workspaceSlug: string) => {

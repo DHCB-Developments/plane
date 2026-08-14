@@ -10,12 +10,20 @@ import { APIService } from "@/services/api.service";
 
 // Types live here (not in @plane/types) so editing them never requires a
 // packages rebuild while the vite dev server is running.
+export type TGithubInstallation = {
+  installation_id: string;
+  account_login: string | null;
+  account_type: string | null;
+  account_avatar_url: string | null;
+};
+
 export type TGithubConnectionStatus = {
   is_app_configured: boolean;
   is_installed: boolean;
   app_slug: string | null;
   webhook_url: string;
   setup_url: string;
+  installations: TGithubInstallation[];
   connection: {
     id: string;
     workspace: string;
@@ -140,8 +148,9 @@ export class GithubIntegrationService extends APIService {
       });
   }
 
-  async disconnect(workspaceSlug: string): Promise<void> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/integrations/github/`)
+  async disconnect(workspaceSlug: string, installationId?: string): Promise<void> {
+    const query = installationId ? `?installation_id=${installationId}` : "";
+    return this.delete(`/api/workspaces/${workspaceSlug}/integrations/github/${query}`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

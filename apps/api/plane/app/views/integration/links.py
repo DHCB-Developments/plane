@@ -14,7 +14,7 @@ from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import GithubBranchLinkSerializer, GithubPullRequestLinkSerializer
 from plane.app.views.base import BaseAPIView
 from plane.db.models import GithubBranchLink, GithubPullRequestLink, GithubRepository
-from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for
+from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for_owner
 
 from .github import get_github_workspace_integration
 
@@ -64,7 +64,7 @@ class IssueGithubLinksEndpoint(BaseAPIView):
             )
 
         try:
-            client = client_for(workspace_integration)
+            client = client_for_owner(workspace_integration, repository.owner)
             pr = client.get_pull_request(repository.owner, repository.name, pr_number)
         except (GithubAppNotConfigured, GithubApiError):
             return Response(
@@ -137,7 +137,7 @@ class ProjectRepositoryPullRequestsEndpoint(BaseAPIView):
                 {"error": "Repository is not part of this project"}, status=status.HTTP_400_BAD_REQUEST
             )
         try:
-            client = client_for(workspace_integration)
+            client = client_for_owner(workspace_integration, repository.owner)
             pulls = client.list_pull_requests(
                 repository.owner,
                 repository.name,

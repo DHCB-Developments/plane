@@ -21,6 +21,7 @@ from plane.utils.integrations.github import (
     GithubApiError,
     GithubAppNotConfigured,
     client_for,
+    get_installations,
     get_workspace_github_credentials,
     has_workspace_github_credentials,
     store_workspace_github_credentials,
@@ -75,18 +76,17 @@ def _connection_payload(workspace_integration):
     app_slug = None
     if workspace_integration:
         _, app_slug, _, _ = get_workspace_github_credentials(workspace_integration)
-    is_installed = bool(
-        workspace_integration and (workspace_integration.metadata or {}).get("installation_id")
-    )
+    installations = get_installations(workspace_integration) if workspace_integration else []
     return {
         "is_app_configured": is_configured,
-        "is_installed": is_installed,
+        "is_installed": bool(installations),
         "app_slug": app_slug,
         "webhook_url": f"{base_url}/api/webhooks/github/",
         "setup_url": f"{base_url}/github-setup/",
+        "installations": installations,
         "connection": (
             WorkspaceIntegrationSerializer(workspace_integration).data
-            if workspace_integration and is_installed
+            if workspace_integration and installations
             else None
         ),
     }
@@ -116,11 +116,10 @@ class GithubConnectionEndpoint(BaseAPIView):
                 {"error": "Save the GitHub App credentials for this workspace first"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if (workspace_integration.metadata or {}).get("installation_id"):
-            return Response(
-                {"error": "GitHub is already connected to this workspace"},
-                status=status.HTTP_409_CONFLICT,
-            )
+        installations = get_installations(workspace_integration)
+        if any(str(i.get("installation_id")) == str(installation_id) for i in installations):
+            # Re-visited callback for an org that's already connected.
+            return Response(_connection_payload(workspace_integration), status=status.HTTP_200_OK)
 
         try:
             client = client_for(workspace_integration, installation_id=installation_id)
@@ -137,13 +136,16 @@ class GithubConnectionEndpoint(BaseAPIView):
             )
 
         account = installation.get("account") or {}
-        workspace_integration.metadata = {
-            **(workspace_integration.metadata or {}),
-            "installation_id": str(installation_id),
-            "account_login": account.get("login"),
-            "account_type": account.get("type"),
-            "account_avatar_url": account.get("avatar_url"),
-        }
+        installations.append(
+            {
+                "installation_id": str(installation_id),
+                "account_login": account.get("login"),
+                "account_type": account.get("type"),
+                "account_avatar_url": account.get("avatar_url"),
+            }
+        )
+        # Normalized shape: the installations list is the source of truth.
+        workspace_integration.metadata = {"installations": installations}
         workspace_integration.save(update_fields=["metadata"])
 
         return Response(_connection_payload(workspace_integration), status=status.HTTP_201_CREATED)
@@ -155,6 +157,16 @@ class GithubConnectionEndpoint(BaseAPIView):
                 {"error": "GitHub is not connected to this workspace"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        installation_id = request.GET.get("installation_id") or request.data.get("installation_id")
+        if installation_id:
+            remaining = [
+                i
+                for i in get_installations(workspace_integration)
+                if str(i.get("installation_id")) != str(installation_id)
+            ]
+            workspace_integration.metadata = {"installations": remaining}
+            workspace_integration.save(update_fields=["metadata"])
+            return Response(_connection_payload(workspace_integration), status=status.HTTP_200_OK)
         workspace_integration.api_token.delete()
         workspace_integration.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -201,31 +213,35 @@ class GithubInstallationRepositoriesEndpoint(BaseAPIView):
 
     def get(self, request, slug):
         workspace_integration = get_github_workspace_integration(slug)
-        if not workspace_integration or not (workspace_integration.metadata or {}).get("installation_id"):
+        installations = get_installations(workspace_integration) if workspace_integration else []
+        if not installations:
             return Response(
                 {"error": "GitHub is not connected to this workspace"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        try:
-            client = client_for(workspace_integration)
-            repositories = client.list_repositories()
-        except (GithubAppNotConfigured, GithubApiError):
+        pool = []
+        errors = 0
+        for installation in installations:
+            try:
+                client = client_for(workspace_integration, installation_id=installation["installation_id"])
+                for repo in client.list_repositories():
+                    pool.append(
+                        {
+                            "repository_id": repo["id"],
+                            "name": repo["name"],
+                            "full_name": repo["full_name"],
+                            "owner": repo["owner"]["login"],
+                            "url": repo["html_url"],
+                            "private": repo["private"],
+                            "default_branch": repo.get("default_branch"),
+                            "account": installation.get("account_login"),
+                        }
+                    )
+            except (GithubAppNotConfigured, GithubApiError):
+                errors += 1
+        if errors and not pool:
             return Response(
                 {"error": "Could not fetch repositories from GitHub"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
-        return Response(
-            [
-                {
-                    "repository_id": repo["id"],
-                    "name": repo["name"],
-                    "full_name": repo["full_name"],
-                    "owner": repo["owner"]["login"],
-                    "url": repo["html_url"],
-                    "private": repo["private"],
-                    "default_branch": repo.get("default_branch"),
-                }
-                for repo in repositories
-            ],
-            status=status.HTTP_200_OK,
-        )
+        return Response(pool, status=status.HTTP_200_OK)

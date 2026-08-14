@@ -16,6 +16,8 @@ from plane.utils.exception_logger import log_exception
 
 
 def _resolve_workspace_integration(payload):
+    from django.db.models import Q
+
     from plane.db.models import WorkspaceIntegration
 
     installation_id = str(payload.get("installation", {}).get("id", ""))
@@ -23,7 +25,9 @@ def _resolve_workspace_integration(payload):
         return None
     return (
         WorkspaceIntegration.objects.filter(
-            integration__provider="github", metadata__installation_id=installation_id
+            Q(metadata__installation_id=installation_id)
+            | Q(metadata__installations__contains=[{"installation_id": installation_id}]),
+            integration__provider="github",
         )
         .select_related("workspace")
         .first()
@@ -78,7 +82,7 @@ def _pr_fields(pr):
 
 def _post_linkback(workspace_integration, repository, pr_number, issues):
     """One comment on the PR pointing back to the newly linked work items."""
-    from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for
+    from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for_owner
 
     workspace_slug = workspace_integration.workspace.slug
     base_url = settings.WEB_URL.rstrip("/") if settings.WEB_URL else ""
@@ -90,8 +94,8 @@ def _post_linkback(workspace_integration, repository, pr_number, issues):
         )
     body = "🔗 Linked to Plane work item" + ("s" if len(lines) > 1 else "") + ":\n" + "\n".join(lines)
     try:
-        client = client_for(workspace_integration)
         owner, repo = repository.get("full_name", "/").split("/", 1)
+        client = client_for_owner(workspace_integration, owner)
         client.create_issue_comment(owner, repo, pr_number, body)
     except (GithubAppNotConfigured, GithubApiError, ValueError) as e:
         # Linkbacks are best-effort; the link itself is already saved.
@@ -316,13 +320,18 @@ def process_github_event(event, delivery_id, payload):
         action = payload.get("action", "")
 
         if event == "installation" and action == "deleted":
-            from plane.db.models import WorkspaceIntegration
+            from plane.utils.integrations.github import get_installations
 
             installation_id = str(payload.get("installation", {}).get("id", ""))
-            WorkspaceIntegration.objects.filter(
-                integration__provider="github",
-                metadata__installation_id=installation_id,
-            ).delete()
+            workspace_integration = _resolve_workspace_integration(payload)
+            if workspace_integration:
+                remaining = [
+                    i
+                    for i in get_installations(workspace_integration)
+                    if str(i.get("installation_id")) != installation_id
+                ]
+                workspace_integration.metadata = {"installations": remaining}
+                workspace_integration.save(update_fields=["metadata"])
             return
 
         workspace_integration = _resolve_workspace_integration(payload)

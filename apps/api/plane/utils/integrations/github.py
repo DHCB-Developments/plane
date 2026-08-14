@@ -68,16 +68,46 @@ def has_workspace_github_credentials(workspace_integration):
     return bool(config.get(CONFIG_APP_ID) and config.get(CONFIG_PRIVATE_KEY))
 
 
+def get_installations(workspace_integration):
+    """The workspace's GitHub App installations (one per connected org/account).
+
+    Tolerates the legacy single-installation metadata shape.
+    """
+    metadata = workspace_integration.metadata or {}
+    installations = metadata.get("installations")
+    if installations is None and metadata.get("installation_id"):
+        installations = [
+            {
+                "installation_id": metadata.get("installation_id"),
+                "account_login": metadata.get("account_login"),
+                "account_type": metadata.get("account_type"),
+                "account_avatar_url": metadata.get("account_avatar_url"),
+            }
+        ]
+    return installations or []
+
+
 def client_for(workspace_integration, installation_id=None):
-    """Build a GithubAppClient from a workspace's stored credentials."""
+    """Build a GithubAppClient from a workspace's stored credentials.
+
+    Defaults to the workspace's first installation when none is specified.
+    """
     app_id, _, private_key, _ = get_workspace_github_credentials(workspace_integration)
     if not (app_id and private_key):
         raise GithubAppNotConfigured("GitHub App credentials are not configured for this workspace")
-    return GithubAppClient(
-        app_id,
-        private_key,
-        installation_id or (workspace_integration.metadata or {}).get("installation_id"),
-    )
+    if installation_id is None:
+        installations = get_installations(workspace_integration)
+        installation_id = installations[0]["installation_id"] if installations else None
+    return GithubAppClient(app_id, private_key, installation_id)
+
+
+def client_for_owner(workspace_integration, owner):
+    """Client bound to the installation that owns the given org/account name."""
+    for installation in get_installations(workspace_integration):
+        if (installation.get("account_login") or "").lower() == (owner or "").lower():
+            return client_for(workspace_integration, installation_id=installation["installation_id"])
+    # Fall back to the first installation — better a 404 from GitHub than none.
+    return client_for(workspace_integration)
 
 
 class GithubAppClient:
