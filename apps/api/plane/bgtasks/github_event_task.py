@@ -173,6 +173,41 @@ def _apply_state_automation(workspace_integration, repository_id, pr_number, eve
         )
 
 
+
+def _upsert_pr_links(workspace_integration, repository, pr_number, fields, resolved):
+    """Create/refresh a link row per resolved issue; returns newly linked issues."""
+    from plane.db.models import GithubPullRequestLink
+
+    workspace_id = workspace_integration.workspace_id
+    newly_linked = []
+    for item in resolved:
+        issue = item["issue"]
+        link, created = GithubPullRequestLink.objects.get_or_create(
+            issue=issue,
+            repository_id=repository.get("id"),
+            pr_number=pr_number,
+            defaults={
+                "project_id": issue.project_id,
+                "workspace_id": workspace_id,
+                "repo_full_name": repository.get("full_name") or "",
+                "link_type": item["link_type"],
+                **fields,
+            },
+        )
+        if created:
+            newly_linked.append(issue)
+        else:
+            # A stronger reference tier upgrades the link; manual stays manual.
+            update = dict(fields)
+            strength = {"relation": 0, "reference": 1, "closing": 2}
+            if link.link_type != "manual" and strength.get(item["link_type"], 0) > strength.get(link.link_type, 0):
+                update["link_type"] = item["link_type"]
+            for attr, value in update.items():
+                setattr(link, attr, value)
+            link.save()
+    return newly_linked
+
+
 def _handle_pull_request_event(workspace_integration, payload):
     from plane.db.models import GithubPullRequestLink
     from plane.utils.integrations.github_refs import parse_branch_references, parse_text_references
@@ -198,32 +233,7 @@ def _handle_pull_request_event(workspace_integration, payload):
     resolved = _resolve_issues(workspace_id, references)
 
     # Upsert a link per referenced issue; refresh state everywhere.
-    newly_linked = []
-    for item in resolved:
-        issue = item["issue"]
-        link, created = GithubPullRequestLink.objects.get_or_create(
-            issue=issue,
-            repository_id=repository_id,
-            pr_number=pr_number,
-            defaults={
-                "project_id": issue.project_id,
-                "workspace_id": workspace_id,
-                "repo_full_name": repository.get("full_name") or "",
-                "link_type": item["link_type"],
-                **fields,
-            },
-        )
-        if created:
-            newly_linked.append(issue)
-        else:
-            # A stronger reference tier upgrades the link; manual stays manual.
-            update = dict(fields)
-            strength = {"relation": 0, "reference": 1, "closing": 2}
-            if link.link_type != "manual" and strength.get(item["link_type"], 0) > strength.get(link.link_type, 0):
-                update["link_type"] = item["link_type"]
-            for attr, value in update.items():
-                setattr(link, attr, value)
-            link.save()
+    newly_linked = _upsert_pr_links(workspace_integration, repository, pr_number, fields, resolved)
 
     # Update links this event no longer mentions (state changes reach every
     # linked issue: merged/closed/draft transitions, title edits, etc.).
@@ -235,6 +245,48 @@ def _handle_pull_request_event(workspace_integration, payload):
         _post_linkback(workspace_integration, repository, pr_number, newly_linked)
 
     _apply_state_automation(workspace_integration, repository_id, pr_number)
+
+
+def _handle_issue_comment_event(workspace_integration, payload):
+    """Link work items mentioned in PR comments (e.g. "#ORBIT-1" or "fixes ORBIT-1").
+
+    Bot comments are ignored so linkbacks (ours or other integrations') can
+    never feed back into new links.
+    """
+    from plane.utils.integrations.github import GithubApiError, GithubAppNotConfigured, client_for_owner
+    from plane.utils.integrations.github_refs import parse_text_references
+
+    if payload.get("action") not in ("created", "edited"):
+        return
+    if (payload.get("sender") or {}).get("type") == "Bot":
+        return
+    issue_obj = payload.get("issue") or {}
+    if not issue_obj.get("pull_request"):
+        # A comment on a plain GitHub issue, not a PR.
+        return
+
+    references = parse_text_references((payload.get("comment") or {}).get("body") or "")
+    resolved = _resolve_issues(workspace_integration.workspace_id, references)
+    if not resolved:
+        return
+
+    repository = payload.get("repository") or {}
+    pr_number = issue_obj.get("number")
+    owner = (repository.get("full_name") or "/").split("/", 1)[0]
+    try:
+        pr = client_for_owner(workspace_integration, owner).get_pull_request(
+            owner, repository.get("name"), pr_number
+        )
+    except (GithubAppNotConfigured, GithubApiError) as e:
+        log_exception(e)
+        return
+
+    newly_linked = _upsert_pr_links(
+        workspace_integration, repository, pr_number, _pr_fields(pr), resolved
+    )
+    if newly_linked:
+        _post_linkback(workspace_integration, repository, pr_number, newly_linked)
+    _apply_state_automation(workspace_integration, repository.get("id"), pr_number)
 
 
 def _handle_pull_request_review_event(workspace_integration, payload):
@@ -342,6 +394,8 @@ def process_github_event(event, delivery_id, payload):
             _handle_pull_request_event(workspace_integration, payload)
         elif event == "pull_request_review":
             _handle_pull_request_review_event(workspace_integration, payload)
+        elif event == "issue_comment":
+            _handle_issue_comment_event(workspace_integration, payload)
         elif event == "check_suite":
             _handle_check_suite_event(workspace_integration, payload)
         elif event == "create":

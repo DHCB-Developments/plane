@@ -20,6 +20,7 @@ from plane.utils.integrations.github import get_workspace_github_credentials
 HANDLED_EVENTS = {
     "pull_request",
     "pull_request_review",
+    "issue_comment",
     "check_suite",
     "create",
     "delete",

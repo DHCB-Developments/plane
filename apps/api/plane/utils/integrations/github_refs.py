@@ -13,8 +13,9 @@ import re
 CLOSING_KEYWORDS = ("fix", "fixes", "fixed", "close", "closes", "closed", "resolve", "resolves", "resolved", "complete", "completes", "completed", "implement", "implements", "implemented")
 RELATION_KEYWORDS = ("relates to", "related to", "relate to")
 
+# Accepted wrappers around the ID: [ORBIT-1], (ORBIT-1), #ORBIT-1, or bare.
 REFERENCE_PATTERN = re.compile(
-    r"(?:(?P<keyword>[a-zA-Z]+(?:\s+to)?)\s+)?[\[\(]?(?P<identifier>[a-zA-Z][a-zA-Z0-9]*)-(?P<sequence>\d+)[\]\)]?",
+    r"(?:(?P<keyword>[a-zA-Z]+(?:\s+to)?)\s+)?[\[\(#]?(?P<identifier>[a-zA-Z][a-zA-Z0-9]*)-(?P<sequence>\d+)[\]\)]?",
     re.IGNORECASE,
 )
 
