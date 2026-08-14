@@ -102,7 +102,7 @@ export const GithubLinksSection = observer(function GithubLinksSection(props: TG
   };
 
   return (
-    <div className="border-t border-subtle-1 py-4">
+    <div className="min-w-0 whitespace-normal break-words border-t border-subtle-1 py-4">
       <LinkPullRequestModal
         workspaceSlug={workspaceSlug}
         projectId={projectId}
