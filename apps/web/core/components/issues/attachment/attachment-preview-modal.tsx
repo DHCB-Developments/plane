@@ -395,6 +395,7 @@ function AttachmentPreviewModalContent(props: TAttachmentPreviewModal) {
       role="dialog"
       aria-modal="true"
       aria-label="Attachment preview"
+      data-prevent-outside-click
     >
       {/* header */}
       <div className="flex flex-shrink-0 items-center justify-between gap-3 px-4 py-3">
