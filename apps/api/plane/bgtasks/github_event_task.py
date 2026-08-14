@@ -155,6 +155,11 @@ def _apply_state_automation(workspace_integration, repository_id, pr_number, eve
         if not issue or str(issue.state_id) == str(target_state.id):
             continue
         old_state = State.objects.filter(pk=issue.state_id).first()
+        # Never pull a finished item back into progress: once a work item sits
+        # in a completed/cancelled state, only pr_merged (which targets a
+        # completed state anyway) may move it.
+        if old_state and old_state.group in ("completed", "cancelled") and key != "pr_merged":
+            continue
         issue.state_id = target_state.id
         issue.save(update_fields=["state_id", "updated_at"])
         IssueActivity.objects.create(
