@@ -15,10 +15,18 @@ AUTOMATION_KEYS = ("draft_pr", "open_pr", "pr_approved", "pr_merged", "pr_closed
 
 
 def _serialize(settings_row):
+    automation = {key: settings_row.automation.get(key) for key in AUTOMATION_KEYS}
+    automation["pr_merged_rules"] = settings_row.automation.get("pr_merged_rules") or []
+    automation["release_cascade"] = settings_row.automation.get("release_cascade") or {
+        "enabled": False,
+        "source_pattern": "release/*",
+        "target_branch": "",
+        "state": None,
+    }
     return {
         "id": str(settings_row.id),
         "project": str(settings_row.project_id),
-        "automation": {key: settings_row.automation.get(key) for key in AUTOMATION_KEYS},
+        "automation": automation,
         "branch_format": settings_row.branch_format,
     }
 
@@ -62,6 +70,39 @@ class ProjectGithubSettingsEndpoint(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST,
                         )
                     cleaned[key] = str(value) if value else None
+            if "pr_merged_rules" in automation:
+                rules = automation.get("pr_merged_rules") or []
+                if not isinstance(rules, list):
+                    return Response(
+                        {"error": "pr_merged_rules must be a list"}, status=status.HTTP_400_BAD_REQUEST
+                    )
+                cleaned_rules = []
+                for rule in rules:
+                    pattern = (rule.get("pattern") or "").strip()
+                    state_id = rule.get("state")
+                    if not pattern:
+                        continue
+                    if state_id and not State.objects.filter(pk=state_id, project_id=project_id).exists():
+                        return Response(
+                            {"error": f"State for branch rule '{pattern}' does not belong to this project"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    cleaned_rules.append({"pattern": pattern, "state": str(state_id) if state_id else None})
+                cleaned["pr_merged_rules"] = cleaned_rules
+            if "release_cascade" in automation:
+                cascade = automation.get("release_cascade") or {}
+                state_id = cascade.get("state")
+                if state_id and not State.objects.filter(pk=state_id, project_id=project_id).exists():
+                    return Response(
+                        {"error": "Release cascade state does not belong to this project"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                cleaned["release_cascade"] = {
+                    "enabled": bool(cascade.get("enabled")),
+                    "source_pattern": (cascade.get("source_pattern") or "release/*").strip(),
+                    "target_branch": (cascade.get("target_branch") or "").strip(),
+                    "state": str(state_id) if state_id else None,
+                }
             settings_row.automation = cleaned
 
         if "branch_format" in request.data:

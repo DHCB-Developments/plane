@@ -111,6 +111,23 @@ def _automation_event_for_state(pr_state):
     }.get(pr_state)
 
 
+
+def _branch_matches(pattern, branch):
+    import fnmatch
+
+    if not (pattern and branch):
+        return False
+    return fnmatch.fnmatch(branch.lower(), pattern.lower())
+
+
+def _resolve_merge_rule(automation, target_branch):
+    """State for a merged PR: first matching branch rule, else the plain mapping."""
+    for rule in automation.get("pr_merged_rules") or []:
+        if _branch_matches(rule.get("pattern"), target_branch):
+            return rule.get("state")
+    return automation.get("pr_merged")
+
+
 def _apply_state_automation(workspace_integration, repository_id, pr_number, event_key=None):
     """Move linked work items per their project's automation mapping.
 
@@ -145,7 +162,12 @@ def _apply_state_automation(workspace_integration, repository_id, pr_number, eve
             )
             if blocking:
                 continue
-        target_state_id = automation.get(key)
+        if key == "pr_merged":
+            # Branch-aware rules: the first pattern matching the merge target
+            # wins; the plain pr_merged mapping is the fallback.
+            target_state_id = _resolve_merge_rule(automation, link.target_branch)
+        else:
+            target_state_id = automation.get(key)
         if not target_state_id:
             continue
         target_state = State.objects.filter(pk=target_state_id, project_id=link.project_id).first()
@@ -250,6 +272,97 @@ def _handle_pull_request_event(workspace_integration, payload):
         _post_linkback(workspace_integration, repository, pr_number, newly_linked)
 
     _apply_state_automation(workspace_integration, repository_id, pr_number)
+    _apply_release_cascade(workspace_integration, payload)
+
+
+
+
+def _apply_release_cascade(workspace_integration, payload):
+    """A release branch shipped: complete every work item staged through it.
+
+    Fires when a merged PR's SOURCE branch matches a project's cascade pattern
+    and its target matches the configured ship branch. Items qualify when all
+    their closing PRs are merged/closed and at least one merged into the
+    release branch in this repository.
+    """
+    import time as time_module
+
+    from plane.db.models import GithubProjectSettings, GithubPullRequestLink, Issue, IssueActivity, State
+
+    pr = payload.get("pull_request") or {}
+    if not (pr.get("merged") or pr.get("merged_at")):
+        return
+    source_branch = (pr.get("head") or {}).get("ref") or ""
+    target_branch = (pr.get("base") or {}).get("ref") or ""
+    repository_id = (payload.get("repository") or {}).get("id")
+    if not (source_branch and repository_id):
+        return
+
+    for settings_row in GithubProjectSettings.objects.filter(
+        workspace_id=workspace_integration.workspace_id
+    ):
+        cascade = (settings_row.automation or {}).get("release_cascade") or {}
+        if not cascade.get("enabled"):
+            continue
+        if not _branch_matches(cascade.get("source_pattern"), source_branch):
+            continue
+        ship_branch = cascade.get("target_branch")
+        if ship_branch and ship_branch.lower() != target_branch.lower():
+            continue
+
+        target_state = None
+        if cascade.get("state"):
+            target_state = State.objects.filter(
+                pk=cascade["state"], project_id=settings_row.project_id
+            ).first()
+        if not target_state:
+            target_state = State.objects.filter(
+                project_id=settings_row.project_id, group="completed", default=True
+            ).first() or State.objects.filter(
+                project_id=settings_row.project_id, group="completed"
+            ).first()
+        if not target_state:
+            continue
+
+        staged_issue_ids = (
+            GithubPullRequestLink.objects.filter(
+                project_id=settings_row.project_id,
+                repository_id=repository_id,
+                target_branch=source_branch,
+                link_type="closing",
+                state__in=["merged", "closed"],
+            )
+            .values_list("issue_id", flat=True)
+            .distinct()
+        )
+        for issue_id in staged_issue_ids:
+            open_work = (
+                GithubPullRequestLink.objects.filter(issue_id=issue_id, link_type="closing")
+                .exclude(state__in=["merged", "closed"])
+                .exists()
+            )
+            if open_work:
+                continue
+            issue = Issue.objects.filter(pk=issue_id).first()
+            if not issue or str(issue.state_id) == str(target_state.id):
+                continue
+            old_state = State.objects.filter(pk=issue.state_id).first()
+            issue.state_id = target_state.id
+            issue.save(update_fields=["state_id", "updated_at"])
+            IssueActivity.objects.create(
+                issue_id=issue.id,
+                actor_id=workspace_integration.actor_id,
+                verb="updated",
+                old_value=old_state.name if old_state else None,
+                new_value=target_state.name,
+                field="state",
+                project_id=settings_row.project_id,
+                workspace_id=workspace_integration.workspace_id,
+                comment=f"updated the state to (release {source_branch} shipped)",
+                old_identifier=old_state.id if old_state else None,
+                new_identifier=target_state.id,
+                epoch=int(time_module.time()),
+            )
 
 
 def _handle_issue_comment_event(workspace_integration, payload):
