@@ -13,7 +13,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 # Module imports
-from plane.app.permissions import WorkSpaceAdminPermission
+from plane.app.permissions import WorkSpaceAdminPermission, WorkspaceEntityPermission
 from plane.app.serializers import WorkspaceIntegrationSerializer
 from plane.app.views.base import BaseAPIView
 from plane.db.models import APIToken, Integration, User, Workspace, WorkspaceIntegration
@@ -96,6 +96,13 @@ class GithubConnectionEndpoint(BaseAPIView):
     """Workspace-level GitHub App connection: status / connect / disconnect."""
 
     permission_classes = [WorkSpaceAdminPermission]
+
+    def get_permissions(self):
+        # Status is read by every member's work item view (the GitHub section
+        # gates on it); mutations stay admin-only.
+        if self.request.method == "GET":
+            return [WorkspaceEntityPermission()]
+        return super().get_permissions()
 
     def get(self, request, slug):
         return Response(
