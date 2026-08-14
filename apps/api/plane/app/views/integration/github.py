@@ -55,6 +55,7 @@ def _ensure_workspace_integration(workspace):
         email=f"github-bot-{workspace.id}@bots.plane.internal",
         first_name="GitHub",
         last_name="Bot",
+        display_name="GitHub",
         is_bot=True,
         is_password_autoset=True,
     )
