@@ -155,3 +155,81 @@ class CycleUserProperties(ProjectBaseModel):
 
     def __str__(self):
         return f"{self.cycle.name} {self.user.email}"
+
+
+class CycleSchedule(ProjectBaseModel):
+    """Auto-schedule configuration: recurring cycle creation and rollover.
+
+    One per project. A daily background task keeps `upcoming_count` future
+    cycles created ("<title_prefix> - <n>") on the configured cadence, and —
+    when `auto_rollover` is on — moves unfinished work items from a cycle that
+    just ended into the next one using the same transfer path as the manual
+    flow (which also freezes the cycle's progress snapshot).
+    """
+
+    enabled = models.BooleanField(default=True)
+    title_prefix = models.CharField(max_length=255)
+    duration_weeks = models.PositiveIntegerField(default=2)
+    cooldown_days = models.PositiveIntegerField(default=0)
+    # The start date of the next cycle to be created; advanced on each creation.
+    next_start_date = models.DateField()
+    upcoming_count = models.PositiveSmallIntegerField(default=1)
+    auto_rollover = models.BooleanField(default=False)
+    next_sequence = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        unique_together = ["project", "deleted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="cycle_schedule_unique_project_when_deleted_at_null",
+            )
+        ]
+        verbose_name = "Cycle Schedule"
+        verbose_name_plural = "Cycle Schedules"
+        db_table = "cycle_schedules"
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.project_id} <{self.title_prefix}>"
+
+
+class CycleProgress(ProjectBaseModel):
+    """One frozen row per cycle per day: the real scope/state counts as they
+    were on that date. Powers the v2 progress charts (accurate scope-creep and
+    burn-up lines, unlike the retroactively computed completion chart)."""
+
+    cycle = models.ForeignKey("db.Cycle", on_delete=models.CASCADE, related_name="daily_progress")
+    date = models.DateField()
+    # issue counts
+    scope = models.PositiveIntegerField(default=0)
+    completed = models.PositiveIntegerField(default=0)
+    backlog = models.PositiveIntegerField(default=0)
+    unstarted = models.PositiveIntegerField(default=0)
+    started = models.PositiveIntegerField(default=0)
+    cancelled = models.PositiveIntegerField(default=0)
+    # estimate points
+    total_estimate_points = models.FloatField(default=0)
+    completed_estimate_points = models.FloatField(default=0)
+    backlog_estimate_points = models.FloatField(default=0)
+    unstarted_estimate_points = models.FloatField(default=0)
+    started_estimate_points = models.FloatField(default=0)
+    cancelled_estimate_points = models.FloatField(default=0)
+
+    class Meta:
+        unique_together = ["cycle", "date", "deleted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cycle", "date"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="cycle_progress_unique_cycle_date_when_deleted_at_null",
+            )
+        ]
+        verbose_name = "Cycle Progress"
+        verbose_name_plural = "Cycle Progress"
+        db_table = "cycle_progress"
+        ordering = ("date",)
+
+    def __str__(self):
+        return f"{self.cycle_id} {self.date}"

@@ -12,10 +12,25 @@ import type {
   TIssuesResponse,
   IWorkspaceActiveCyclesResponse,
   TCycleDistribution,
+  TCycleProgress,
   TProgressSnapshot,
   TCycleEstimateDistribution,
 } from "@plane/types";
 import { APIService } from "@/services/api.service";
+
+// Local type (not @plane/types) so edits never require a packages rebuild.
+export type TCycleSchedule = {
+  id: string;
+  project: string;
+  enabled: boolean;
+  title_prefix: string;
+  duration_weeks: number;
+  cooldown_days: number;
+  next_start_date: string | null;
+  upcoming_count: number;
+  auto_rollover: boolean;
+  next_sequence: number;
+};
 
 export class CycleService extends APIService {
   constructor() {
@@ -53,7 +68,7 @@ export class CycleService extends APIService {
     workspaceSlug: string,
     projectId: string,
     cycleId: string
-  ): Promise<TProgressSnapshot> {
+  ): Promise<TCycleProgress[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/cycle-progress/`)
       .then((res) => res?.data)
       .catch((err) => {
@@ -80,6 +95,34 @@ export class CycleService extends APIService {
 
   async getWorkspaceCycles(workspaceSlug: string): Promise<ICycle[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/cycles/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getCycleSchedule(workspaceSlug: string, projectId: string): Promise<TCycleSchedule | null> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycle-schedule/`)
+      .then((response) => response?.data ?? null)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async saveCycleSchedule(
+    workspaceSlug: string,
+    projectId: string,
+    data: Partial<TCycleSchedule>
+  ): Promise<TCycleSchedule> {
+    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycle-schedule/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteCycleSchedule(workspaceSlug: string, projectId: string): Promise<void> {
+    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycle-schedule/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
