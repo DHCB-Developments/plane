@@ -350,6 +350,9 @@ CELERY_IMPORTS = (
     "plane.bgtasks.issue_description_version_sync",
     # integrations
     "plane.bgtasks.github_event_task",
+    # cycle auto-scheduling
+    "plane.bgtasks.cycle_schedule_task",
+    "plane.bgtasks.cycle_progress_task",
 )
 
 FILE_SIZE_LIMIT = int(os.environ.get("FILE_SIZE_LIMIT", 5242880))

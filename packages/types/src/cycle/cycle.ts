@@ -6,6 +6,7 @@
 
 import type { TIssue } from "../issues/issue";
 import type { IIssueFilterOptions } from "../view-props";
+import type { TLogoProps } from "../common";
 
 export type TCycleGroups = "current" | "upcoming" | "completed" | "draft";
 
@@ -86,6 +87,7 @@ export interface IProjectDetails {
 
 export interface ICycle extends TProgressSnapshot {
   progress_snapshot: TProgressSnapshot | undefined;
+  logo_props?: TLogoProps;
 
   created_at?: string;
   created_by?: string;

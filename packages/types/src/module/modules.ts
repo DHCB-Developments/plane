@@ -7,6 +7,7 @@
 import type { ILinkDetails } from "../issues";
 import type { TIssue } from "../issues/issue";
 import type { IIssueFilterOptions } from "../view-props";
+import type { TLogoProps } from "../common";
 
 export type TModuleStatus = "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
 
@@ -53,6 +54,7 @@ export type TModuleEstimateDistribution = {
 };
 
 export interface IModule {
+  logo_props?: TLogoProps;
   total_issues: number;
   completed_issues: number;
   backlog_issues: number;

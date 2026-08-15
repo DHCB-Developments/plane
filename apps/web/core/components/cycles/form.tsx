@@ -4,10 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
 import { ETabIndices } from "@plane/constants";
+import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@plane/propel/emoji-icon-picker";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 // types
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
@@ -57,10 +59,12 @@ export function CycleForm(props: Props) {
       description: data?.description || "",
       start_date: data?.start_date || null,
       end_date: data?.end_date || null,
+      logo_props: data?.logo_props,
     },
   });
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CYCLE, isMobile);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   useEffect(() => {
     reset({
@@ -69,8 +73,27 @@ export function CycleForm(props: Props) {
     });
   }, [data, reset]);
 
+  const onSubmit = (formData: Partial<ICycle>) => {
+    // Past start dates are fine; an end date in the past is not — the server
+    // locks cycles whose end date has passed, so it would be born uneditable.
+    const endDate = getDate(formData.end_date);
+    if (endDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (endDate < today) {
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "End date has already passed",
+          message: "The start date can be in the past, but the end date must be today or later.",
+        });
+        return;
+      }
+    }
+    return handleFormSubmit(formData);
+  };
+
   return (
-    <form onSubmit={handleSubmit((formData) => handleFormSubmit(formData))}>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-5 p-5">
         <div className="flex items-center gap-x-3">
           {!status && (
@@ -102,31 +125,65 @@ export function CycleForm(props: Props) {
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Controller
-              name="name"
-              control={control}
-              rules={{
-                required: t("title_is_required"),
-                maxLength: {
-                  value: 255,
-                  message: t("title_should_be_less_than_255_characters"),
-                },
-              }}
-              render={({ field: { value, onChange } }) => (
-                <Input
+            <div className="flex items-center gap-2">
+              <Controller
+                name="logo_props"
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <EmojiPicker
+                    isOpen={isEmojiPickerOpen}
+                    handleToggle={setIsEmojiPickerOpen}
+                    className="flex items-center justify-center"
+                    buttonClassName="flex items-center justify-center"
+                    label={
+                      <span className="grid size-9 place-items-center rounded-md border border-subtle">
+                        {value?.in_use ? (
+                          <Logo logo={value} size={18} type="lucide" />
+                        ) : (
+                          <span className="text-16 text-tertiary">+</span>
+                        )}
+                      </span>
+                    }
+                    onChange={(val: any) => {
+                      let logoValue: Record<string, unknown> = {};
+                      if (val?.type === "emoji") logoValue = { value: val.value };
+                      else if (val?.type === "icon")
+                        logoValue = { name: val.value?.name, color: val.value?.color, background_color: val.value?.color };
+                      onChange({ in_use: val?.type, [val?.type]: logoValue });
+                      setIsEmojiPickerOpen(false);
+                    }}
+                    defaultOpen={EmojiIconPickerTypes.ICON}
+                  />
+                )}
+              />
+              <div className="grow">
+                <Controller
                   name="name"
-                  type="text"
-                  placeholder={t("title")}
-                  className="w-full text-14"
-                  value={value}
-                  inputSize="md"
-                  onChange={onChange}
-                  hasError={Boolean(errors?.name)}
-                  tabIndex={getIndex("description")}
-                  autoFocus
+                  control={control}
+                  rules={{
+                    required: t("title_is_required"),
+                    maxLength: {
+                      value: 255,
+                      message: t("title_should_be_less_than_255_characters"),
+                    },
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <Input
+                      name="name"
+                      type="text"
+                      placeholder={t("title")}
+                      className="w-full text-14"
+                      value={value}
+                      inputSize="md"
+                      onChange={onChange}
+                      hasError={Boolean(errors?.name)}
+                      tabIndex={getIndex("description")}
+                      autoFocus
+                    />
+                  )}
                 />
-              )}
-            />
+              </div>
+            </div>
             <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
           </div>
           <div>
@@ -158,7 +215,6 @@ export function CycleForm(props: Props) {
                     <DateRangeDropdown
                       buttonVariant="border-with-text"
                       className="h-7"
-                      minDate={new Date()}
                       value={{
                         from: getDate(startDateValue),
                         to: getDate(endDateValue),
