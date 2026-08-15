@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
 import { ETabIndices } from "@plane/constants";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 // types
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
@@ -69,8 +70,27 @@ export function CycleForm(props: Props) {
     });
   }, [data, reset]);
 
+  const onSubmit = (formData: Partial<ICycle>) => {
+    // Past start dates are fine; an end date in the past is not — the server
+    // locks cycles whose end date has passed, so it would be born uneditable.
+    const endDate = getDate(formData.end_date);
+    if (endDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (endDate < today) {
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "End date has already passed",
+          message: "The start date can be in the past, but the end date must be today or later.",
+        });
+        return;
+      }
+    }
+    return handleFormSubmit(formData);
+  };
+
   return (
-    <form onSubmit={handleSubmit((formData) => handleFormSubmit(formData))}>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-5 p-5">
         <div className="flex items-center gap-x-3">
           {!status && (
@@ -158,7 +178,6 @@ export function CycleForm(props: Props) {
                     <DateRangeDropdown
                       buttonVariant="border-with-text"
                       className="h-7"
-                      minDate={new Date()}
                       value={{
                         from: getDate(startDateValue),
                         to: getDate(endDateValue),
