@@ -97,6 +97,9 @@ class Module(ProjectBaseModel):
     external_id = models.CharField(max_length=255, blank=True, null=True)
     archived_at = models.DateTimeField(null=True)
     logo_props = models.JSONField(default=dict)
+    # Frozen distribution/progress data captured when the module reaches a
+    # terminal status, so completed module reports stop drifting as issues move.
+    progress_snapshot = models.JSONField(default=dict)
 
     class Meta:
         unique_together = ["name", "project", "deleted_at"]

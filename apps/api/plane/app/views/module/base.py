@@ -638,6 +638,46 @@ class ModuleViewSet(BaseViewSet):
                 module_id=pk,
             )
 
+        # Terminal modules get a frozen report: the first retrieve after a
+        # module completes/cancels stores the distributions; later retrieves
+        # serve the stored copy so the report stops drifting as issues move on.
+        SNAPSHOT_KEYS = (
+            "distribution",
+            "estimate_distribution",
+            "total_issues",
+            "completed_issues",
+            "cancelled_issues",
+            "started_issues",
+            "unstarted_issues",
+            "backlog_issues",
+            "total_estimate_points",
+            "completed_estimate_points",
+        )
+        if modules and modules.status in ("completed", "cancelled"):
+            if modules.progress_snapshot:
+                data.update({key: modules.progress_snapshot[key] for key in SNAPSHOT_KEYS if key in modules.progress_snapshot})
+            else:
+                # Distribution values are lazy QuerySets and may contain UUIDs;
+                # materialize them, then round-trip through JSON to freeze plain
+                # serializable data.
+                snapshot_source = {}
+                for key in SNAPSHOT_KEYS:
+                    if key not in data:
+                        continue
+                    value = data[key]
+                    if isinstance(value, dict):
+                        value = {
+                            inner_key: (
+                                inner_value
+                                if isinstance(inner_value, (dict, list, str, int, float, type(None)))
+                                else list(inner_value)
+                            )
+                            for inner_key, inner_value in value.items()
+                        }
+                    snapshot_source[key] = value
+                snapshot = json.loads(json.dumps(snapshot_source, default=str))
+                Module.objects.filter(pk=pk).update(progress_snapshot=snapshot)
+
         recent_visited_task.delay(
             slug=slug,
             entity_name="module",
@@ -669,6 +709,15 @@ class ModuleViewSet(BaseViewSet):
         serializer = ModuleWriteSerializer(current_module, data=request.data, partial=True)
 
         if serializer.is_valid():
+            # Leaving a terminal status thaws the frozen report; the next
+            # retrieve computes (and, if terminal again, re-freezes) live data.
+            new_status = request.data.get("status")
+            if (
+                new_status
+                and new_status not in ("completed", "cancelled")
+                and current_module.progress_snapshot
+            ):
+                current_module.progress_snapshot = {}
             serializer.save()
             module = module_queryset.values(
                 # Required fields

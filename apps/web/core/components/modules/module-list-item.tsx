@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 // icons
 import { Info } from "lucide-react";
+import { Logo } from "@plane/propel/emoji-icon-picker";
 import { CheckIcon } from "@plane/propel/icons";
 // ui
 import { CircularProgressIndicator } from "@plane/ui";
@@ -76,19 +77,26 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
       itemLink={`/${workspaceSlug?.toString()}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
       onItemClick={handleItemClick}
       prependTitleElement={
-        <CircularProgressIndicator size={30} percentage={progress} strokeWidth={3}>
-          {completedModuleCheck ? (
-            progress === 100 ? (
+        <div className="flex items-center gap-2">
+          <CircularProgressIndicator size={30} percentage={progress} strokeWidth={3}>
+            {completedModuleCheck ? (
+              progress === 100 ? (
+                <CheckIcon className="h-3 w-3 stroke-[2] text-accent-primary" />
+              ) : (
+                <span className="text-13 text-accent-primary">{`!`}</span>
+              )
+            ) : progress === 100 ? (
               <CheckIcon className="h-3 w-3 stroke-[2] text-accent-primary" />
             ) : (
-              <span className="text-13 text-accent-primary">{`!`}</span>
-            )
-          ) : progress === 100 ? (
-            <CheckIcon className="h-3 w-3 stroke-[2] text-accent-primary" />
-          ) : (
-            <span className="text-9 text-tertiary">{`${progress}%`}</span>
+              <span className="text-9 text-tertiary">{`${progress}%`}</span>
+            )}
+          </CircularProgressIndicator>
+          {moduleDetails.logo_props?.in_use && (
+            <span className="grid size-6 place-items-center rounded bg-layer-1">
+              <Logo logo={moduleDetails.logo_props} size={14} type="lucide" />
+            </span>
           )}
-        </CircularProgressIndicator>
+        </div>
       }
       appendTitleElement={
         <button

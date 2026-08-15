@@ -10,9 +10,11 @@ import { PageHead } from "@/components/core/page-title";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // local imports
-import { WorkspaceActiveCyclesUpgrade } from "@/components/active-cycles/workspace-active-cycles-upgrade";
+import { WorkspaceActiveCyclesList } from "@/components/active-cycles/workspace-active-cycles";
+import type { Route } from "./+types/page";
 
-function WorkspaceActiveCyclesPage() {
+function WorkspaceActiveCyclesPage({ params }: Route.ComponentProps) {
+  const { workspaceSlug } = params;
   const { currentWorkspace } = useWorkspace();
   // derived values
   const pageTitle = currentWorkspace?.name ? `${currentWorkspace?.name} - Active Cycles` : undefined;
@@ -20,7 +22,7 @@ function WorkspaceActiveCyclesPage() {
   return (
     <>
       <PageHead title={pageTitle} />
-      <WorkspaceActiveCyclesUpgrade />
+      <WorkspaceActiveCyclesList workspaceSlug={workspaceSlug} />
     </>
   );
 }

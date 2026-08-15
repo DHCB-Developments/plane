@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
 import { ETabIndices } from "@plane/constants";
+import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@plane/propel/emoji-icon-picker";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import type { IModule } from "@plane/types";
@@ -55,6 +56,7 @@ export function ModuleForm(props: Props) {
       project_id: projectId,
       name: data?.name || "",
       description: data?.description || "",
+      logo_props: data?.logo_props,
       status: data?.status || "backlog",
       lead_id: data?.lead_id || null,
       member_ids: data?.member_ids || [],
@@ -62,6 +64,7 @@ export function ModuleForm(props: Props) {
   });
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_MODULE, isMobile);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   const { t } = useTranslation();
 
@@ -113,31 +116,65 @@ export function ModuleForm(props: Props) {
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Controller
-              control={control}
-              name="name"
-              rules={{
-                required: t("title_is_required"),
-                maxLength: {
-                  value: 255,
-                  message: t("title_should_be_less_than_255_characters"),
-                },
-              }}
-              render={({ field: { value, onChange } }) => (
-                <Input
-                  id="name"
+            <div className="flex items-center gap-2">
+              <Controller
+                name="logo_props"
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <EmojiPicker
+                    isOpen={isEmojiPickerOpen}
+                    handleToggle={setIsEmojiPickerOpen}
+                    className="flex items-center justify-center"
+                    buttonClassName="flex items-center justify-center"
+                    label={
+                      <span className="grid size-9 place-items-center rounded-md border border-subtle">
+                        {value?.in_use ? (
+                          <Logo logo={value} size={18} type="lucide" />
+                        ) : (
+                          <span className="text-16 text-tertiary">+</span>
+                        )}
+                      </span>
+                    }
+                    onChange={(val: any) => {
+                      let logoValue: Record<string, unknown> = {};
+                      if (val?.type === "emoji") logoValue = { value: val.value };
+                      else if (val?.type === "icon")
+                        logoValue = { name: val.value?.name, color: val.value?.color, background_color: val.value?.color };
+                      onChange({ in_use: val?.type, [val?.type]: logoValue });
+                      setIsEmojiPickerOpen(false);
+                    }}
+                    defaultOpen={EmojiIconPickerTypes.ICON}
+                  />
+                )}
+              />
+              <div className="grow">
+                <Controller
+                  control={control}
                   name="name"
-                  type="text"
-                  value={value}
-                  onChange={onChange}
-                  hasError={Boolean(errors?.name)}
-                  placeholder={t("title")}
-                  className="w-full text-14"
-                  tabIndex={getIndex("name")}
-                  autoFocus
+                  rules={{
+                    required: t("title_is_required"),
+                    maxLength: {
+                      value: 255,
+                      message: t("title_should_be_less_than_255_characters"),
+                    },
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <Input
+                      id="name"
+                      name="name"
+                      type="text"
+                      value={value}
+                      onChange={onChange}
+                      hasError={Boolean(errors?.name)}
+                      placeholder={t("title")}
+                      className="w-full text-14"
+                      tabIndex={getIndex("name")}
+                      autoFocus
+                    />
+                  )}
                 />
-              )}
-            />
+              </div>
+            </div>
             <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
           </div>
           <div>
