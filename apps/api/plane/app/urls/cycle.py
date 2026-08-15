@@ -6,6 +6,9 @@ from django.urls import path
 
 
 from plane.app.views import (
+    CycleProgressV2Endpoint,
+    WorkspaceActiveCyclesEndpoint,
+    ProjectCycleScheduleEndpoint,
     CycleViewSet,
     CycleIssueViewSet,
     CycleDateCheckEndpoint,
@@ -102,5 +105,20 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/cycles/<uuid:cycle_id>/analytics/",
         CycleAnalyticsEndpoint.as_view(),
         name="project-cycle",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/cycle-schedule/",
+        ProjectCycleScheduleEndpoint.as_view(),
+        name="project-cycle-schedule",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/cycles/<uuid:cycle_id>/cycle-progress/",
+        CycleProgressV2Endpoint.as_view(),
+        name="cycle-progress-v2",
+    ),
+    path(
+        "workspaces/<str:slug>/active-cycles/",
+        WorkspaceActiveCyclesEndpoint.as_view(),
+        name="workspace-active-cycles",
     ),
 ]

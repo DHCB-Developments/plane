@@ -8,6 +8,7 @@ import type { MouseEvent } from "react";
 import { useRef } from "react";
 import { observer } from "mobx-react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Logo } from "@plane/propel/emoji-icon-picker";
 import { CheckIcon } from "@plane/propel/icons";
 // plane imports
 import type { TCycleGroups } from "@plane/types";
@@ -86,13 +87,20 @@ export const CyclesListItem = observer(function CyclesListItem(props: TCyclesLis
       onItemClick={handleItemClick}
       className={className}
       prependTitleElement={
-        <CircularProgressIndicator size={30} percentage={progress} strokeWidth={3}>
-          {progress === 100 ? (
-            <CheckIcon className="h-3 w-3 stroke-2" />
-          ) : (
-            <span className="text-9 text-primary">{`${progress}%`}</span>
+        <div className="flex items-center gap-2">
+          <CircularProgressIndicator size={30} percentage={progress} strokeWidth={3}>
+            {progress === 100 ? (
+              <CheckIcon className="h-3 w-3 stroke-2" />
+            ) : (
+              <span className="text-9 text-primary">{`${progress}%`}</span>
+            )}
+          </CircularProgressIndicator>
+          {cycleDetails.logo_props?.in_use && (
+            <span className="grid size-6 place-items-center rounded bg-layer-1">
+              <Logo logo={cycleDetails.logo_props} size={14} type="lucide" />
+            </span>
           )}
-        </CircularProgressIndicator>
+        </div>
       }
       actionableItems={
         <CycleListItemAction

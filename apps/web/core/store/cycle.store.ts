@@ -12,6 +12,7 @@ import { computedFn } from "mobx-utils";
 import type {
   ICycle,
   TCyclePlotType,
+  TCycleProgress,
   TProgressSnapshot,
   TCycleEstimateDistribution,
   TCycleDistribution,
@@ -71,7 +72,7 @@ export interface ICycleStore {
   fetchArchivedCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchActiveCycleProgress: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<TProgressSnapshot>;
-  fetchActiveCycleProgressPro: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<void>;
+  fetchActiveCycleProgressPro: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<TCycleProgress[]>;
   fetchActiveCycleAnalytics: (
     workspaceSlug: string,
     projectId: string,
@@ -500,8 +501,24 @@ export class CycleStore implements ICycleStore {
    * @param cycleId
    *  @returns
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fetchActiveCycleProgressPro = action(async (workspaceSlug: string, projectId: string, cycleId: string) => {});
+  fetchActiveCycleProgressPro = action(async (workspaceSlug: string, projectId: string, cycleId: string) => {
+    this.progressLoader = true;
+    return await this.cycleService
+      .workspaceActiveCyclesProgressPro(workspaceSlug, projectId, cycleId)
+      .then((progress) => {
+        runInAction(() => {
+          set(this.cycleMap, [cycleId, "progress"], progress);
+          this.progressLoader = false;
+        });
+        return progress;
+      })
+      .catch((error) => {
+        runInAction(() => {
+          this.progressLoader = false;
+        });
+        throw error;
+      });
+  });
 
   /**
    * @description fetches active cycle analytics

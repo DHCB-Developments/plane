@@ -11,6 +11,7 @@ import { useTranslation } from "@plane/i18n";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { PageHead } from "@/components/core/page-title";
+import { CycleAutoScheduleSettings } from "@/components/cycles/auto-schedule-settings";
 import { ProjectSettingsFeatureControlItem } from "@/components/settings/project/content/feature-control-item";
 import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 // hooks
@@ -55,6 +56,9 @@ function FeaturesCyclesSettingsPage({ params }: Route.ComponentProps) {
             value={!!currentProjectDetails?.cycle_view}
             workspaceSlug={workspaceSlug}
           />
+          {currentProjectDetails?.cycle_view && (
+            <CycleAutoScheduleSettings workspaceSlug={workspaceSlug} projectId={projectId} />
+          )}
         </div>
       </section>
     </SettingsContentWrapper>

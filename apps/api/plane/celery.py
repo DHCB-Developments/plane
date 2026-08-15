@@ -60,6 +60,14 @@ app.conf.beat_schedule = {
         "task": "plane.bgtasks.issue_automation_task.archive_and_close_old_issues",
         "schedule": crontab(hour=1, minute=0),  # UTC 01:00
     },
+    "check-every-day-to-record-cycle-progress": {
+        "task": "plane.bgtasks.cycle_progress_task.record_cycle_progress",
+        "schedule": crontab(hour=0, minute=15),  # UTC 00:15 — freeze yesterday before scheduling runs
+    },
+    "check-every-day-to-schedule-cycles": {
+        "task": "plane.bgtasks.cycle_schedule_task.schedule_cycles",
+        "schedule": crontab(hour=0, minute=45),  # UTC 00:45 — after most local midnights advance dates
+    },
     "check-every-day-to-delete_exporter_history": {
         "task": "plane.bgtasks.exporter_expired_task.delete_old_s3_link",
         "schedule": crontab(hour=1, minute=30),  # UTC 01:30
