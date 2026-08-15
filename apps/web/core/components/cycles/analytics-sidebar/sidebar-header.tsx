@@ -159,8 +159,7 @@ export const CycleSidebarHeader = observer(function CycleSidebarHeader(props: Pr
                   <DateRangeDropdown
                     className="h-7"
                     buttonVariant="border-with-text"
-                    minDate={new Date()}
-                    value={{
+                          value={{
                       from: getDate(startDateValue),
                       to: getDate(endDateValue),
                     }}
