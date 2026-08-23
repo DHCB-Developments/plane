@@ -38,19 +38,38 @@ def _resolve_issues(workspace_id, references):
     """Map parsed {identifier, sequence[, link_type]} references to Issues.
 
     Unknown identifiers (branch-name noise like "v2-3") resolve to nothing and
-    are silently dropped — the ProjectIdentifier table is the source of truth.
+    are silently dropped. The ProjectIdentifier table is the primary lookup,
+    with a self-healing fallback to Project.identifier — renames historically
+    left the lookup table stale, and the fallback repairs the row in place.
     """
-    from plane.db.models import Issue, ProjectIdentifier
+    from plane.db.models import Issue, Project, ProjectIdentifier
 
     resolved = []
     for reference in references:
         project_identifier = ProjectIdentifier.objects.filter(
             workspace_id=workspace_id, name__iexact=reference["identifier"]
         ).first()
-        if not project_identifier:
-            continue
+        if project_identifier:
+            project_id = project_identifier.project_id
+        else:
+            project = Project.objects.filter(
+                workspace_id=workspace_id,
+                identifier__iexact=reference["identifier"],
+                archived_at__isnull=True,
+            ).first()
+            if not project:
+                continue
+            project_id = project.id
+            try:
+                ProjectIdentifier.objects.update_or_create(
+                    project=project,
+                    defaults={"name": project.identifier, "workspace_id": workspace_id},
+                )
+            except Exception as e:
+                # Healing is best-effort; resolution proceeds either way.
+                log_exception(e)
         issue = Issue.objects.filter(
-            project_id=project_identifier.project_id, sequence_id=reference["sequence"]
+            project_id=project_id, sequence_id=reference["sequence"]
         ).first()
         if issue:
             resolved.append({"issue": issue, "link_type": reference.get("link_type", "reference")})
