@@ -174,7 +174,24 @@ class Project(BaseModel):
             workspace = Workspace.objects.get(id=self.workspace_id)
             self.timezone = workspace.timezone
 
-        return super().save(*args, **kwargs)
+        old_identifier = None
+        if not is_creating:
+            old_identifier = (
+                Project.objects.filter(pk=self.pk).values_list("identifier", flat=True).first()
+            )
+
+        result = super().save(*args, **kwargs)
+
+        # Keep the ProjectIdentifier lookup table in sync on renames — every
+        # "<IDENTIFIER>-<number>" reference (browse URLs, integrations) resolves
+        # through it, and historically renames left it stale.
+        if old_identifier is not None and old_identifier != self.identifier:
+            ProjectIdentifier.objects.update_or_create(
+                project=self,
+                defaults={"name": self.identifier, "workspace_id": self.workspace_id},
+            )
+
+        return result
 
 
 class ProjectBaseModel(BaseModel):
