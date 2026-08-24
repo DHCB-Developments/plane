@@ -37,6 +37,9 @@ type TAttachmentPreviewModal = {
   initialAttachmentId: string;
   onClose: () => void;
   issueServiceType?: TIssueServiceType;
+  /** Override store lookup — lets non-issue surfaces (e.g. comment
+   * attachments) reuse the modal with their own data. */
+  resolveAttachment?: (attachmentId: string) => TIssueAttachment | undefined;
 };
 
 type TViewerProps = {
@@ -319,11 +322,18 @@ function TextViewer(props: TViewerProps) {
 }
 
 function AttachmentPreviewModalContent(props: TAttachmentPreviewModal) {
-  const { attachmentIds, initialAttachmentId, onClose, issueServiceType = EIssueServiceType.ISSUES } = props;
+  const {
+    attachmentIds,
+    initialAttachmentId,
+    onClose,
+    issueServiceType = EIssueServiceType.ISSUES,
+    resolveAttachment,
+  } = props;
   // store hooks
   const {
-    attachment: { getAttachmentById },
+    attachment: { getAttachmentById: getStoreAttachmentById },
   } = useIssueDetail(issueServiceType);
+  const getAttachmentById = resolveAttachment ?? getStoreAttachmentById;
   // hooks
   const { isMobile } = usePlatformOS();
   // derived values
