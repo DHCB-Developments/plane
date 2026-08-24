@@ -353,6 +353,7 @@ CELERY_IMPORTS = (
     # cycle auto-scheduling
     "plane.bgtasks.cycle_schedule_task",
     "plane.bgtasks.cycle_progress_task",
+    "plane.bgtasks.comment_attachment_task",
 )
 
 FILE_SIZE_LIMIT = int(os.environ.get("FILE_SIZE_LIMIT", 5242880))

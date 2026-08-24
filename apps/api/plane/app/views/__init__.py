@@ -137,6 +137,11 @@ from .issue.activity import IssueActivityEndpoint
 
 from .issue.archive import IssueArchiveViewSet, BulkArchiveIssuesEndpoint
 
+from .issue.comment_attachment import (
+    CommentAttachmentV2Endpoint,
+    CommentAttachmentUnboundEndpoint,
+    CommentAttachmentBindEndpoint,
+)
 from .issue.attachment import (
     IssueAttachmentEndpoint,
     # V2

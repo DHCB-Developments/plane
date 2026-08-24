@@ -26,6 +26,9 @@ from plane.app.views import (
     IssuePaginatedViewSet,
     IssueDetailEndpoint,
     IssueAttachmentV2Endpoint,
+    CommentAttachmentV2Endpoint,
+    CommentAttachmentUnboundEndpoint,
+    CommentAttachmentBindEndpoint,
     IssueBulkUpdateDateEndpoint,
     IssueVersionEndpoint,
     WorkItemDescriptionVersionEndpoint,
@@ -282,5 +285,30 @@ urlpatterns = [
         "workspaces/<str:slug>/work-items/<str:project_identifier>-<str:issue_identifier>/",
         IssueDetailIdentifierEndpoint.as_view(),
         name="issue-detail-identifier",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/comments/<uuid:comment_id>/attachments/",
+        CommentAttachmentV2Endpoint.as_view(),
+        name="comment-attachments",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/comments/<uuid:comment_id>/attachments/<uuid:pk>/",
+        CommentAttachmentV2Endpoint.as_view(),
+        name="comment-attachment-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/comment-attachments/",
+        CommentAttachmentUnboundEndpoint.as_view(),
+        name="comment-attachments-unbound",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/comment-attachments/<uuid:pk>/",
+        CommentAttachmentUnboundEndpoint.as_view(),
+        name="comment-attachment-unbound-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/comments/<uuid:comment_id>/attachments/bind/",
+        CommentAttachmentBindEndpoint.as_view(),
+        name="comment-attachments-bind",
     ),
 ]

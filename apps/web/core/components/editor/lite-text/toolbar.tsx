@@ -30,6 +30,7 @@ type Props = {
   handleSubmit: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   isCommentEmpty: boolean;
   isSubmitting: boolean;
+  extraItems?: React.ReactNode;
   showAccessSpecifier: boolean;
   showSubmitButton: boolean;
   editorRef: EditorRefApi | null;
@@ -66,6 +67,7 @@ export function IssueCommentToolbar(props: Props) {
     handleSubmit,
     isCommentEmpty,
     isSubmitting,
+    extraItems,
     showAccessSpecifier,
     showSubmitButton,
     editorRef,
@@ -174,6 +176,7 @@ export function IssueCommentToolbar(props: Props) {
               })}
             </div>
           ))}
+          {extraItems && <div className="flex items-stretch gap-0.5 px-2.5">{extraItems}</div>}
         </div>
         {showSubmitButton && (
           <div className="sticky right-1">
