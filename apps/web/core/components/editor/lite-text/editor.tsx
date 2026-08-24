@@ -40,6 +40,8 @@ type LiteTextEditorWrapperProps = MakeOptional<
   showSubmitButton?: boolean;
   isSubmitting?: boolean;
   showToolbarInitially?: boolean;
+  toolbarExtraItems?: React.ReactNode;
+  preToolbarContent?: React.ReactNode;
   variant?: "full" | "lite" | "none";
   issue_id?: string;
   parentClassName?: string;
@@ -191,6 +193,8 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
         )}
       </div>
 
+      {rest.preToolbarContent}
+
       {/* Full Toolbar - conditionally rendered */}
       {isFullVariant && editable && (
         <div
@@ -200,6 +204,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
           )}
         >
           <IssueCommentToolbar
+            extraItems={rest.toolbarExtraItems}
             accessSpecifier={accessSpecifier}
             executeCommand={(item) => {
               // TODO: update this while toolbar homogenization

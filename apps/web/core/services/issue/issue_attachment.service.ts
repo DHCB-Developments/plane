@@ -93,3 +93,128 @@ export class IssueAttachmentService extends APIService {
       });
   }
 }
+
+export class CommentAttachmentService extends APIService {
+  private fileUploadService: FileUploadService;
+
+  constructor() {
+    super(API_BASE_URL);
+    this.fileUploadService = new FileUploadService();
+  }
+
+  private baseUrl(workspaceSlug: string, projectId: string, issueId: string, commentId: string) {
+    return `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comments/${commentId}/attachments/`;
+  }
+
+  async uploadCommentAttachment(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    commentId: string,
+    file: File,
+    uploadProgressHandler?: AxiosRequestConfig["onUploadProgress"]
+  ): Promise<TIssueAttachment> {
+    const fileMetaData = await getFileMetaDataForUpload(file);
+    return this.post(this.baseUrl(workspaceSlug, projectId, issueId, commentId), fileMetaData)
+      .then(async (response) => {
+        const signedURLResponse: TIssueAttachmentUploadResponse = response?.data;
+        const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
+        await this.fileUploadService.uploadFile(
+          signedURLResponse.upload_data.url,
+          fileUploadPayload,
+          uploadProgressHandler
+        );
+        await this.patch(
+          `${this.baseUrl(workspaceSlug, projectId, issueId, commentId)}${signedURLResponse.asset_id}/`
+        );
+        return signedURLResponse.attachment;
+      })
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getCommentAttachments(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    commentId: string
+  ): Promise<TIssueAttachment[]> {
+    return this.get(this.baseUrl(workspaceSlug, projectId, issueId, commentId))
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteCommentAttachment(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    commentId: string,
+    assetId: string
+  ): Promise<void> {
+    return this.delete(`${this.baseUrl(workspaceSlug, projectId, issueId, commentId)}${assetId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+}
+
+export class PendingCommentAttachmentService extends APIService {
+  private fileUploadService: FileUploadService;
+
+  constructor() {
+    super(API_BASE_URL);
+    this.fileUploadService = new FileUploadService();
+  }
+
+  async uploadPending(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    file: File
+  ): Promise<TIssueAttachment> {
+    const fileMetaData = await getFileMetaDataForUpload(file);
+    const base = `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comment-attachments/`;
+    return this.post(base, fileMetaData)
+      .then(async (response) => {
+        const signedURLResponse: TIssueAttachmentUploadResponse = response?.data;
+        const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
+        await this.fileUploadService.uploadFile(signedURLResponse.upload_data.url, fileUploadPayload);
+        await this.patch(`${base}${signedURLResponse.asset_id}/`);
+        return signedURLResponse.attachment;
+      })
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deletePending(workspaceSlug: string, projectId: string, issueId: string, assetId: string): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comment-attachments/${assetId}/`
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async bind(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    commentId: string,
+    assetIds: string[]
+  ): Promise<void> {
+    return this.post(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/comments/${commentId}/attachments/bind/`,
+      { asset_ids: assetIds }
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+}
