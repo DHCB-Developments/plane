@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from ..base import BaseViewSet
 from plane.app.serializers import IssueTypeSerializer, IssueTypeAvailableSerializer
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import IssueType, ProjectIssueType, Project, Issue, IssueProperty
+from plane.db.models import IssueType, ProjectIssueType, Project, Issue, IssueTypeProperty, IssuePropertyValue
 from plane.db.models.issue_type import DEFAULT_ISSUE_TYPES
 
 
@@ -193,9 +193,11 @@ class IssueTypeViewSet(BaseViewSet):
             # changed individually (Issue.type is SET_NULL, so removing the type
             # nulls the FK — it never deletes work items).
             project_issue_type.delete()
-            # This project's own (project-scoped) properties on the type go with it.
-            for local_property in IssueProperty.objects.filter(issue_type_id=pk, project_id=project_id):
-                local_property.delete()
+            # This project's attachments of properties to the type go with it,
+            # along with the values they carried on this project's work items.
+            for link in IssueTypeProperty.objects.filter(issue_type_id=pk, project_id=project_id):
+                IssuePropertyValue.objects.filter(property_id=link.property_id, project_id=project_id).delete()
+                link.delete()
             if not ProjectIssueType.objects.filter(issue_type_id=pk).exists():
                 IssueType.objects.filter(pk=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -224,8 +226,8 @@ class IssueTypeViewSet(BaseViewSet):
                     distinct=True,
                 ),
                 properties_count=Count(
-                    "properties",
-                    filter=Q(properties__deleted_at__isnull=True),
+                    "property_links",
+                    filter=Q(property_links__deleted_at__isnull=True),
                     distinct=True,
                 ),
             )
