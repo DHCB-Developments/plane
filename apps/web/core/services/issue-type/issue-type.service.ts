@@ -10,6 +10,7 @@ import type {
   IIssueTypeAvailable,
   IIssueProperty,
   TIssueTypePayload,
+  TIssuePropertyImpact,
   TIssuePropertyPayload,
   TIssuePropertyValues,
 } from "@plane/types";
@@ -179,6 +180,93 @@ export class IssueTypeService extends APIService {
     return this.post(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-property-values/`,
       data
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  // ----- property library (workspace level) -----
+  async getLibraryProperties(workspaceSlug: string, includeArchived = false): Promise<IIssueProperty[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/issue-properties/`, {
+      params: includeArchived ? { archived: "true" } : undefined,
+    })
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async createLibraryProperty(workspaceSlug: string, data: TIssuePropertyPayload): Promise<IIssueProperty> {
+    return this.post(`/api/workspaces/${workspaceSlug}/issue-properties/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async updateLibraryProperty(
+    workspaceSlug: string,
+    propertyId: string,
+    data: TIssuePropertyPayload
+  ): Promise<IIssueProperty> {
+    return this.patch(`/api/workspaces/${workspaceSlug}/issue-properties/${propertyId}/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async deleteLibraryProperty(workspaceSlug: string, propertyId: string): Promise<void> {
+    return this.delete(`/api/workspaces/${workspaceSlug}/issue-properties/${propertyId}/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getLibraryPropertyImpact(workspaceSlug: string, propertyId: string): Promise<TIssuePropertyImpact> {
+    return this.get(`/api/workspaces/${workspaceSlug}/issue-properties/${propertyId}/impact/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async duplicateLibraryProperty(workspaceSlug: string, propertyId: string): Promise<IIssueProperty> {
+    return this.post(`/api/workspaces/${workspaceSlug}/issue-properties/${propertyId}/duplicate/`, {})
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  // ----- attachment preflight / detach -----
+  async getIssuePropertyDetachImpact(
+    workspaceSlug: string,
+    projectId: string,
+    issueTypeId: string,
+    propertyId: string
+  ): Promise<{ issues_with_values: number }> {
+    return this.get(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-types/${issueTypeId}/properties/${propertyId}/impact/`
+    )
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async detachIssueProperty(
+    workspaceSlug: string,
+    projectId: string,
+    issueTypeId: string,
+    propertyId: string,
+    clearValues: boolean
+  ): Promise<void> {
+    return this.delete(
+      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-types/${issueTypeId}/properties/${propertyId}/${clearValues ? "?clear_values=true" : ""}`
     )
       .then((response) => response?.data)
       .catch((error) => {

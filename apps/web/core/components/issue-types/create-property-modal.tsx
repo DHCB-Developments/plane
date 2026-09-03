@@ -22,15 +22,29 @@ type Props = {
   handleClose: () => void;
   workspaceSlug: string;
   projectId: string;
-  issueTypeId: string;
+  /** "type": create in the library AND attach to this type (issueTypeId required);
+   *  "library": definition only, attached later from a type. */
+  mode?: "type" | "library";
+  issueTypeId?: string;
   propertyId?: string;
 };
 
 export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyModal(props: Props) {
-  const { isOpen, handleClose, workspaceSlug, projectId, issueTypeId, propertyId } = props;
+  const { isOpen, handleClose, workspaceSlug, projectId, issueTypeId, propertyId, mode = "type" } = props;
   const { t } = useTranslation();
-  const { getPropertiesByTypeId, createIssueProperty, updateIssueProperty } = useIssueTypes();
-  const existing = getPropertiesByTypeId(issueTypeId).find((p) => p.id === propertyId);
+  const {
+    getPropertiesByTypeId,
+    createIssueProperty,
+    updateIssueProperty,
+    getLibraryProperties,
+    createLibraryProperty,
+    updateLibraryProperty,
+  } = useIssueTypes();
+  const isLibraryMode = mode === "library" || !issueTypeId;
+  const existing = isLibraryMode
+    ? getLibraryProperties(workspaceSlug).find((p) => p.id === propertyId)
+    : getPropertiesByTypeId(issueTypeId as string).find((p) => p.id === propertyId);
+  const usedElsewhere = (existing?.usage?.length ?? 0) > 1;
   // form state
   const [displayName, setDisplayName] = useState("");
   const [description, setDescription] = useState("");
@@ -42,7 +56,6 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
   const [dateFormat, setDateFormat] = useState(DATE_FORMATS[0].key);
   const [numberDefault, setNumberDefault] = useState("");
   const [options, setOptions] = useState<{ id?: string; name: string }[]>([]);
-  const [isProjectScoped, setIsProjectScoped] = useState(false);
   const [optionInput, setOptionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,7 +71,6 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
     setDateFormat((existing?.settings?.display_format as string) ?? DATE_FORMATS[0].key);
     setNumberDefault(existing?.default_value?.[0] ?? "");
     setOptions((existing?.options ?? []).map((o) => ({ id: o.id, name: o.name })));
-    setIsProjectScoped(!!existing?.project);
     setOptionInput("");
   }, [isOpen, propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,13 +118,18 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
       settings,
       default_value: defaultValue,
       ...(isDropdown ? { options } : {}),
-      is_project_scoped: isProjectScoped,
     };
 
     setIsSubmitting(true);
     try {
-      if (propertyId) await updateIssueProperty(workspaceSlug, projectId, issueTypeId, propertyId, payload);
-      else await createIssueProperty(workspaceSlug, projectId, issueTypeId, payload);
+      if (isLibraryMode) {
+        if (propertyId) await updateLibraryProperty(workspaceSlug, propertyId, payload);
+        else await createLibraryProperty(workspaceSlug, payload);
+      } else if (propertyId) {
+        await updateIssueProperty(workspaceSlug, projectId, issueTypeId as string, propertyId, payload);
+      } else {
+        await createIssueProperty(workspaceSlug, projectId, issueTypeId as string, payload);
+      }
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("work_item_types.settings.properties.toast.create.success.title"),
@@ -144,6 +161,12 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} width={EModalWidth.XXL}>
+      {propertyId && (usedElsewhere || (!isLibraryMode && existing?.usage === undefined)) && (
+        <p className="mx-5 mt-4 rounded-md border border-warning-strong bg-warning-subtle px-3 py-2 text-12 text-warning-primary">
+          This is a shared library definition — name, description and options change everywhere it&apos;s attached.
+          Mandatory/Active apply only to this attachment.
+        </p>
+      )}
       <div className="flex items-center justify-between px-5 pt-5">
         <h4 className="text-16 font-medium text-secondary">
           {propertyId
@@ -307,14 +330,9 @@ export const CreateUpdatePropertyModal = observer(function CreateUpdatePropertyM
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             Active
           </label>
-          <label className="flex items-center gap-2 text-13">
-            <input
-              type="checkbox"
-              checked={isProjectScoped}
-              onChange={(e) => setIsProjectScoped(e.target.checked)}
-            />
-            Only this project
-          </label>
+          {isLibraryMode && (
+            <span className="text-11 text-tertiary">(defaults for new attachments)</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="neutral-primary" size="sm" onClick={handleClose} disabled={isSubmitting}>

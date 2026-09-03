@@ -87,6 +87,7 @@ from .issue_property import (
     IssueProperty,
     IssuePropertyOption,
     IssuePropertyValue,
+    IssueTypeProperty,
     PropertyTypeEnum,
     RelationTypeEnum,
 )

@@ -20,6 +20,8 @@ from ..base import BaseViewSet, BaseAPIView
 from plane.app.serializers import IssuePropertySerializer
 from plane.app.permissions import ROLE, allow_permission
 from plane.db.models import (
+    IssueTypeProperty,
+    WorkspaceMember,
     IssueProperty,
     IssuePropertyOption,
     IssuePropertyValue,
@@ -96,19 +98,38 @@ def extract_value(value):
     return None
 
 
-def visible_properties(issue_type_id, project_id):
-    """Properties of a type visible in a project: workspace-shared + that project's own."""
-    return IssueProperty.objects.filter(issue_type_id=issue_type_id).filter(
-        Q(project__isnull=True) | Q(project_id=project_id)
+def visible_properties(issue_type_id, project_id, include_inactive=True):
+    """Properties attached to a type in a project, with link settings overlaid.
+
+    Returns IssueProperty objects whose is_required / is_active / default_value /
+    sort_order reflect the (project, type) link rather than the library
+    definition, plus `link_id`. Archived definitions are excluded.
+    """
+    links = (
+        IssueTypeProperty.objects.filter(
+            issue_type_id=issue_type_id, project_id=project_id, property__is_archived=False
+        )
+        .select_related("property")
+        .prefetch_related("property__options")
+        .order_by("sort_order")
     )
+    result = []
+    for link in links:
+        if not include_inactive and not link.is_active:
+            continue
+        prop = link.property
+        prop.link_id = link.id
+        prop.is_required = link.is_required
+        prop.is_active = link.is_active
+        prop.default_value = link.default_value
+        prop.sort_order = link.sort_order
+        result.append(prop)
+    return result
 
 
 def missing_required_property_values(issue_type_id, values_map, project_id=None):
-    """Return the display names of active, required properties on the type that have no value.
-
-    Used for server-side mandatory enforcement wherever the type and its values are known
-    together (e.g. intake create, external API). An empty list means validation passed.
-    """
+    """Display names of active, required properties on the type that have no value.
+    An empty list means validation passed."""
     if not issue_type_id:
         return []
     values_map = values_map or {}
@@ -122,23 +143,18 @@ def missing_required_property_values(issue_type_id, values_map, project_id=None)
 
     return [
         prop.display_name
-        for prop in visible_properties(issue_type_id, project_id).filter(is_active=True, is_required=True)
-        if _is_empty(values_map.get(str(prop.id)))
+        for prop in visible_properties(issue_type_id, project_id, include_inactive=False)
+        if prop.is_required and _is_empty(values_map.get(str(prop.id)))
     ]
 
 
 def set_issue_property_values(issue, values_map, actor):
     """Write custom property values for an issue from a {property_id: [values]} map.
-
-    Only properties that belong to the issue's (active) type are written; single-select
-    properties are capped to one value; empty values are skipped. Existing values for
-    each supplied property are replaced. Caller is responsible for the transaction.
-    Shared by IssuePropertyValueEndpoint and the intake create flow.
-    """
+    Only properties attached (and active) to the issue's type in its project are written."""
     if not values_map or not getattr(issue, "type_id", None):
         return
     type_properties = {
-        str(p.id): p for p in visible_properties(issue.type_id, issue.project_id).filter(is_active=True)
+        str(p.id): p for p in visible_properties(issue.type_id, issue.project_id, include_inactive=False)
     }
     for prop_id, raw_values in values_map.items():
         prop = type_properties.get(str(prop_id))
@@ -163,177 +179,204 @@ def set_issue_property_values(issue, values_map, actor):
             )
 
 
+def sync_property_options(property_obj, options, actor):
+    """Create / update / remove dropdown options to match the submitted list."""
+    existing = {str(o.id): o for o in property_obj.options.filter(deleted_at__isnull=True)}
+    seen = set()
+    for idx, opt in enumerate(options or []):
+        oid = str(opt.get("id")) if opt.get("id") else None
+        data = {
+            "name": opt.get("name", ""),
+            "description": opt.get("description", ""),
+            "logo_props": opt.get("logo_props", {}),
+            "is_active": opt.get("is_active", True),
+            "is_default": opt.get("is_default", False),
+            "sort_order": (idx + 1) * 10000,
+        }
+        if oid and oid in existing:
+            obj = existing[oid]
+            for key, val in data.items():
+                setattr(obj, key, val)
+            obj.updated_by = actor
+            obj.save()
+            seen.add(oid)
+        else:
+            IssuePropertyOption.objects.create(
+                property=property_obj,
+                workspace=property_obj.workspace,
+                created_by=actor,
+                updated_by=actor,
+                **data,
+            )
+    for oid, obj in existing.items():
+        if oid not in seen:
+            obj.delete()
+
+
+def clear_link_values(link):
+    """Delete this project's values for the linked property (used on detach)."""
+    return IssuePropertyValue.objects.filter(property_id=link.property_id, project_id=link.project_id).delete()
+
+
+def _used_outside_project(prop, project_id):
+    return IssueTypeProperty.objects.filter(property=prop).exclude(project_id=project_id).exists()
+
+
+def _is_workspace_admin(user, slug):
+    return WorkspaceMember.objects.filter(
+        member=user, workspace__slug=slug, role=ROLE.ADMIN.value, is_active=True
+    ).exists()
+
+
 class IssuePropertyViewSet(BaseViewSet):
+    """Properties attached to a work item type in a project (the links).
+    `pk` in the routes is the PROPERTY id; the link resolves from (project, type, property)."""
+
     serializer_class = IssuePropertySerializer
     model = IssueProperty
-
-    def get_queryset(self):
-        return (
-            IssueProperty.objects.filter(
-                workspace__slug=self.kwargs.get("slug"),
-                issue_type_id=self.kwargs.get("issue_type_id"),
-            )
-            # Scope: workspace-shared properties + this project's own.
-            .filter(Q(project__isnull=True) | Q(project_id=self.kwargs.get("project_id")))
-            .prefetch_related("options")
-            .order_by("sort_order")
-        )
 
     def _validate_type_in_project(self, slug, project_id, issue_type_id):
         return ProjectIssueType.objects.filter(
             project_id=project_id, issue_type_id=issue_type_id, deleted_at__isnull=True
         ).exists()
 
-    def _sync_options(self, property_obj, options, actor):
-        existing = {str(o.id): o for o in property_obj.options.filter(deleted_at__isnull=True)}
-        seen = set()
-        for idx, opt in enumerate(options or []):
-            oid = str(opt.get("id")) if opt.get("id") else None
-            data = {
-                "name": opt.get("name", ""),
-                "description": opt.get("description", ""),
-                "logo_props": opt.get("logo_props", {}),
-                "is_active": opt.get("is_active", True),
-                "is_default": opt.get("is_default", False),
-                "sort_order": (idx + 1) * 10000,
-            }
-            if oid and oid in existing:
-                obj = existing[oid]
-                for key, val in data.items():
-                    setattr(obj, key, val)
-                obj.updated_by = actor
-                obj.save()
-                seen.add(oid)
-            else:
-                IssuePropertyOption.objects.create(
-                    property=property_obj,
-                    workspace=property_obj.workspace,
-                    project=property_obj.project,
-                    created_by=actor,
-                    updated_by=actor,
-                    **data,
-                )
-        for oid, obj in existing.items():
-            if oid not in seen:
-                obj.delete()
+    def _get_link(self, project_id, issue_type_id, property_id):
+        return IssueTypeProperty.objects.filter(
+            project_id=project_id, issue_type_id=issue_type_id, property_id=property_id
+        ).first()
+
+    def _linked(self, issue_type_id, project_id, property_id):
+        return next(p for p in visible_properties(issue_type_id, project_id) if str(p.id) == str(property_id))
 
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
     def list(self, request, slug, project_id, issue_type_id):
-        return Response(IssuePropertySerializer(self.get_queryset(), many=True).data, status=status.HTTP_200_OK)
+        return Response(
+            IssuePropertySerializer(visible_properties(issue_type_id, project_id), many=True).data,
+            status=status.HTTP_200_OK,
+        )
 
     @allow_permission([ROLE.ADMIN])
     def create(self, request, slug, project_id, issue_type_id):
+        """Attach: {"property_id"} links an existing definition; a full payload
+        creates the definition in the library and links it in one step."""
         project = Project.objects.filter(pk=project_id, workspace__slug=slug).first()
         if project is None:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
         if not self._validate_type_in_project(slug, project_id, issue_type_id):
             return Response({"error": "Work item type not found in project"}, status=status.HTTP_404_NOT_FOUND)
 
-        options = request.data.get("options", [])
-        is_project_scoped = bool(request.data.get("is_project_scoped", False))
-        serializer = IssuePropertySerializer(
-            data=request.data, context={"project_id": project_id, "issue_type_id": issue_type_id}
-        )
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        if serializer.validated_data.get("property_type") == PropertyTypeEnum.OPTION and not options:
-            return Response(
-                {"options": "A dropdown property needs at least one option"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
+        property_id = request.data.get("property_id")
         with transaction.atomic():
-            prop = serializer.save(
-                issue_type_id=issue_type_id,
+            if property_id:
+                prop = IssueProperty.objects.filter(pk=property_id, workspace__slug=slug, is_archived=False).first()
+                if prop is None:
+                    return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                options = request.data.get("options", [])
+                serializer = IssuePropertySerializer(data=request.data)
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                if serializer.validated_data.get("property_type") == PropertyTypeEnum.OPTION and not options:
+                    return Response(
+                        {"options": "A dropdown property needs at least one option"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                prop = serializer.save(
+                    workspace_id=project.workspace_id, created_by=request.user, updated_by=request.user
+                )
+                if prop.property_type == PropertyTypeEnum.OPTION:
+                    sync_property_options(prop, options, request.user)
+
+            if self._get_link(project_id, issue_type_id, prop.id):
+                return Response(
+                    {"error": "This property is already attached to the type in this project"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            IssueTypeProperty.objects.create(
+                project_id=project_id,
                 workspace_id=project.workspace_id,
-                # NULL project = shared across every project using the type;
-                # set = visible only in this project.
-                project_id=project_id if is_project_scoped else None,
+                issue_type_id=issue_type_id,
+                property=prop,
+                is_required=bool(request.data.get("is_required", prop.is_required))
+                and prop.property_type != PropertyTypeEnum.BOOLEAN,
+                is_active=bool(request.data.get("is_active", prop.is_active)),
+                default_value=request.data.get("default_value", prop.default_value) or [],
                 created_by=request.user,
                 updated_by=request.user,
             )
-            if prop.property_type == PropertyTypeEnum.OPTION:
-                self._sync_options(prop, options, request.user)
-
-        instance = self.get_queryset().get(pk=prop.pk)
-        return Response(IssuePropertySerializer(instance).data, status=status.HTTP_201_CREATED)
+        return Response(
+            IssuePropertySerializer(self._linked(issue_type_id, project_id, prop.id)).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @allow_permission([ROLE.ADMIN])
     def partial_update(self, request, slug, project_id, issue_type_id, pk):
-        prop = self.get_queryset().filter(pk=pk).first()
-        if prop is None:
+        """Link settings update; definition fields are forwarded to the library
+        definition (workspace admin required if it is used in other projects)."""
+        link = self._get_link(project_id, issue_type_id, pk)
+        if link is None:
             return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
+        prop = link.property
 
-        # Scope transitions (shared <-> only-this-project), guarded both ways.
-        if "is_project_scoped" in request.data:
-            want_local = bool(request.data.get("is_project_scoped"))
-            is_local = prop.project_id is not None
-            if want_local != is_local:
-                if want_local:
-                    # shared -> local would orphan values on other projects' work items.
-                    other_values = (
-                        IssuePropertyValue.objects.filter(property=prop).exclude(project_id=project_id).count()
-                    )
-                    if other_values:
-                        return Response(
-                            {
-                                "error": f"Cannot scope to this project: {other_values} value(s) exist on work "
-                                "items in other projects. Clear them first."
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    prop.project_id = project_id
-                else:
-                    # local -> shared: the name must be free across the whole type
-                    # (any other shared or project-local property would collide in
-                    # someone's visible set).
-                    name_clash = (
-                        IssueProperty.objects.filter(
-                            issue_type_id=prop.issue_type_id,
-                            display_name__iexact=prop.display_name,
-                            deleted_at__isnull=True,
-                        )
-                        .exclude(pk=prop.pk)
-                        .exists()
-                    )
-                    if name_clash:
-                        return Response(
-                            {
-                                "error": "Cannot share: a property with this name already exists on this type "
-                                "in another project."
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    prop.project_id = None
-                prop.updated_by = request.user
-                prop.save(update_fields=["project", "workspace", "updated_by", "updated_at"])
-                # Options follow the property's scope.
-                prop.options.filter(deleted_at__isnull=True).update(project_id=prop.project_id)
+        link_fields = {"is_required", "is_active", "default_value", "sort_order"}
+        definition_data = {k: v for k, v in request.data.items() if k not in link_fields and k != "options"}
 
-        serializer = IssuePropertySerializer(
-            prop,
-            data=request.data,
-            partial=True,
-            context={"project_id": project_id, "issue_type_id": issue_type_id},
-        )
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if (definition_data or "options" in request.data) and _used_outside_project(prop, project_id):
+            if not _is_workspace_admin(request.user, slug):
+                return Response(
+                    {
+                        "error": "This property is used in other projects — only a workspace admin can change "
+                        "its definition. You can still change how it behaves in this project."
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         with transaction.atomic():
-            prop = serializer.save(updated_by=request.user)
-            if "options" in request.data and prop.property_type == PropertyTypeEnum.OPTION:
-                self._sync_options(prop, request.data.get("options", []), request.user)
+            for field in link_fields & set(request.data.keys()):
+                value = request.data.get(field)
+                if field == "is_required":
+                    value = bool(value) and prop.property_type != PropertyTypeEnum.BOOLEAN
+                if value is not None:
+                    setattr(link, field, value)
+            link.updated_by = request.user
+            link.save()
 
-        instance = self.get_queryset().get(pk=pk)
-        return Response(IssuePropertySerializer(instance).data, status=status.HTTP_200_OK)
+            if definition_data or "options" in request.data:
+                serializer = IssuePropertySerializer(prop, data=definition_data, partial=True)
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                prop = serializer.save(updated_by=request.user)
+                if "options" in request.data and prop.property_type == PropertyTypeEnum.OPTION:
+                    sync_property_options(prop, request.data.get("options", []), request.user)
+
+        return Response(
+            IssuePropertySerializer(self._linked(issue_type_id, project_id, pk)).data, status=status.HTTP_200_OK
+        )
 
     @allow_permission([ROLE.ADMIN])
     def destroy(self, request, slug, project_id, issue_type_id, pk):
-        prop = self.get_queryset().filter(pk=pk).first()
-        if prop is None:
+        """Detach. `?clear_values=true` also deletes this project's values."""
+        link = self._get_link(project_id, issue_type_id, pk)
+        if link is None:
             return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
-        prop.delete()
+        with transaction.atomic():
+            if request.GET.get("clear_values") == "true":
+                clear_link_values(link)
+            link.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @allow_permission([ROLE.ADMIN])
+    def impact(self, request, slug, project_id, issue_type_id, pk):
+        """Preflight for the detach prompt: this project's work items carrying a value."""
+        if self._get_link(project_id, issue_type_id, pk) is None:
+            return Response({"error": "Property not found"}, status=status.HTTP_404_NOT_FOUND)
+        issues_with_values = (
+            IssuePropertyValue.objects.filter(property_id=pk, project_id=project_id)
+            .values("issue_id")
+            .distinct()
+            .count()
+        )
+        return Response({"issues_with_values": issues_with_values}, status=status.HTTP_200_OK)
 
 
 class IssuePropertyValueEndpoint(BaseAPIView):

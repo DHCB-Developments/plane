@@ -5,6 +5,7 @@
 from django.urls import path
 
 from plane.app.views import IssueTypeViewSet, IssuePropertyViewSet, IssuePropertyValueEndpoint
+from plane.app.views.issue_type.library import IssuePropertyLibraryViewSet
 
 
 urlpatterns = [
@@ -54,5 +55,32 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/issue-property-values/",
         IssuePropertyValueEndpoint.as_view(),
         name="issue-property-values",
+    ),
+    # ----- property library (workspace level) -----
+    path(
+        "workspaces/<str:slug>/issue-properties/",
+        IssuePropertyLibraryViewSet.as_view({"get": "list", "post": "create"}),
+        name="issue-property-library",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-properties/<uuid:pk>/",
+        IssuePropertyLibraryViewSet.as_view({"patch": "partial_update", "delete": "destroy"}),
+        name="issue-property-library-detail",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-properties/<uuid:pk>/impact/",
+        IssuePropertyLibraryViewSet.as_view({"get": "impact"}),
+        name="issue-property-library-impact",
+    ),
+    path(
+        "workspaces/<str:slug>/issue-properties/<uuid:pk>/duplicate/",
+        IssuePropertyLibraryViewSet.as_view({"post": "duplicate"}),
+        name="issue-property-library-duplicate",
+    ),
+    # ----- link preflight -----
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issue-types/<uuid:issue_type_id>/properties/<uuid:pk>/impact/",
+        IssuePropertyViewSet.as_view({"get": "impact"}),
+        name="issue-type-property-impact",
     ),
 ]
