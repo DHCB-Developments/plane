@@ -34,11 +34,32 @@ export interface IIssueProperty {
   default_value: string[];
   settings: Record<string, unknown>;
   sort_order: number;
-  issue_type: string;
-  /** null = shared across all projects using the type; set = only that project */
+  /** legacy; definitions live in the workspace library now */
+  issue_type: string | null;
   project: string | null;
   options: IIssuePropertyOption[];
+  /** set when read through a type attachment (project + type + property) */
+  link_id?: string | null;
+  is_archived?: boolean;
+  /** library listing only: where the definition is attached */
+  usage?: TIssuePropertyUsage[] | null;
 }
+
+export type TIssuePropertyUsage = {
+  link_id: string;
+  project_id: string;
+  project_identifier: string;
+  project_name: string;
+  issue_type_id: string;
+  issue_type_name: string;
+  values: number;
+};
+
+export type TIssuePropertyImpact = {
+  usage: TIssuePropertyUsage[];
+  total_values: number;
+  requires_workspace_admin: boolean;
+};
 
 export type TIssuePropertyOptionPayload = {
   id?: string;
@@ -61,7 +82,8 @@ export type TIssuePropertyPayload = {
   default_value?: string[];
   settings?: Record<string, unknown>;
   options?: TIssuePropertyOptionPayload[];
-  /** create-only: scope the property to the current project */
-  is_project_scoped?: boolean;
+  /** attach an existing library definition instead of creating one */
+  property_id?: string;
+  is_archived?: boolean;
 };
 

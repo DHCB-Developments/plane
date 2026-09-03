@@ -30,14 +30,26 @@ class RelationTypeEnum(models.TextChoices):
 
 
 class IssueProperty(WorkspaceBaseModel):
-    issue_type = models.ForeignKey("db.IssueType", on_delete=models.CASCADE, related_name="properties")
+    """A workspace-level property definition (the "property library").
+
+    Definitions carry name, kind, options and description. They are attached to
+    work item types per project through IssueTypeProperty links, which hold the
+    per-attachment settings (required, default, order, active). Names are not
+    unique: two projects may legitimately want different "Branch" dropdowns.
+    `issue_type` is a legacy column kept nullable for compatibility.
+    """
+
+    issue_type = models.ForeignKey(
+        "db.IssueType", on_delete=models.SET_NULL, related_name="properties", null=True, blank=True
+    )
     display_name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     logo_props = models.JSONField(default=dict)
     property_type = models.CharField(max_length=255, choices=PropertyTypeEnum.choices)
     relation_type = models.CharField(max_length=255, choices=RelationTypeEnum.choices, null=True, blank=True)
-    is_required = models.BooleanField(default=False)  # docs: "Mandatory property"
+    is_required = models.BooleanField(default=False)  # definition default, copied onto new links
     is_active = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False)  # hidden from pickers, values stay readable
     is_multi = models.BooleanField(default=False)
     default_value = ArrayField(models.TextField(), blank=True, default=list)
     settings = models.JSONField(default=dict)  # text format, date display format, etc.
@@ -50,33 +62,59 @@ class IssueProperty(WorkspaceBaseModel):
         verbose_name_plural = "Issue Properties"
         db_table = "issue_properties"
         ordering = ("sort_order",)
-        unique_together = ["issue_type", "display_name", "project", "deleted_at"]
-        constraints = [
-            # Scope-aware uniqueness (project is NULL for workspace-shared
-            # properties, so NULL-distinct semantics need two partial constraints).
-            models.UniqueConstraint(
-                fields=["issue_type", "display_name"],
-                condition=Q(deleted_at__isnull=True, project__isnull=True),
-                name="issue_property_unique_shared_name_when_deleted_at_null",
-            ),
-            models.UniqueConstraint(
-                fields=["issue_type", "display_name", "project"],
-                condition=Q(deleted_at__isnull=True, project__isnull=False),
-                name="issue_property_unique_project_name_when_deleted_at_null",
-            ),
-        ]
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            largest = IssueProperty.objects.filter(issue_type=self.issue_type).aggregate(largest=Max("sort_order"))[
-                "largest"
-            ]
+            largest = IssueProperty.objects.filter(workspace_id=self.workspace_id).aggregate(
+                largest=Max("sort_order")
+            )["largest"]
             if largest is not None:
                 self.sort_order = largest + 10000
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.display_name}"
+
+
+class IssueTypeProperty(ProjectBaseModel):
+    """Attaches a library property to a work item type within one project.
+
+    The link — not the definition — carries requiredness, default, order and
+    active state, so one shared definition can behave differently per project.
+    """
+
+    issue_type = models.ForeignKey("db.IssueType", on_delete=models.CASCADE, related_name="property_links")
+    property = models.ForeignKey("db.IssueProperty", on_delete=models.CASCADE, related_name="type_links")
+    is_required = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    default_value = ArrayField(models.TextField(), blank=True, default=list)
+    sort_order = models.FloatField(default=65535)
+
+    class Meta:
+        verbose_name = "Issue Type Property"
+        verbose_name_plural = "Issue Type Properties"
+        db_table = "issue_type_properties"
+        ordering = ("sort_order",)
+        unique_together = ["project", "issue_type", "property", "deleted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "issue_type", "property"],
+                condition=Q(deleted_at__isnull=True),
+                name="issue_type_property_unique_link_when_deleted_at_null",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            largest = IssueTypeProperty.objects.filter(
+                project_id=self.project_id, issue_type_id=self.issue_type_id
+            ).aggregate(largest=Max("sort_order"))["largest"]
+            if largest is not None:
+                self.sort_order = largest + 10000
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.issue_type_id} <- {self.property_id} ({self.project_id})"
 
 
 class IssuePropertyOption(WorkspaceBaseModel):

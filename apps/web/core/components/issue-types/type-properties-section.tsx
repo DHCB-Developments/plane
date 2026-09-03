@@ -13,7 +13,7 @@ import { useTranslation } from "@plane/i18n";
 // hooks
 import { useIssueTypes } from "@/hooks/store/use-issue-types";
 // local imports
-import { CreateUpdatePropertyModal } from "./create-property-modal";
+import { AttachPropertyModal } from "./attach-property-modal";
 import { PropertyItem } from "./property-item";
 
 type Props = {
@@ -26,7 +26,7 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
   const { workspaceSlug, projectId, issueTypeId } = props;
   const { t } = useTranslation();
   const { getPropertiesByTypeId, fetchIssueProperties, getIssueTypeById } = useIssueTypes();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAttachOpen, setIsAttachOpen] = useState(false);
 
   useSWR(
     workspaceSlug && projectId && issueTypeId ? `ISSUE_TYPE_PROPERTIES_${issueTypeId}` : null,
@@ -41,9 +41,9 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
 
   return (
     <>
-      <CreateUpdatePropertyModal
-        isOpen={isCreateOpen}
-        handleClose={() => setIsCreateOpen(false)}
+      <AttachPropertyModal
+        isOpen={isAttachOpen}
+        handleClose={() => setIsAttachOpen(false)}
         workspaceSlug={workspaceSlug}
         projectId={projectId}
         issueTypeId={issueTypeId}
@@ -55,11 +55,9 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
           </span>
           <span className="text-12 text-tertiary">{properties.length}</span>
         </div>
-        {usageCount > 1 && (
-          <p className="text-11 text-tertiary">
-            Shared type — changes to shared properties apply in all {usageCount} projects using it; “Only this project” properties stay here.
-          </p>
-        )}
+        <p className="text-11 text-tertiary">
+          Attachments are per project{usageCount > 1 ? ` — this type is used in ${usageCount} projects; each picks its own properties` : ""}. Mandatory and Active are set here; names and options live in the library.
+        </p>
         {properties.map((property) => (
           <PropertyItem
             key={property.id}
@@ -71,10 +69,10 @@ export const TypePropertiesSection = observer(function TypePropertiesSection(pro
         ))}
         <button
           type="button"
-          onClick={() => setIsCreateOpen(true)}
+          onClick={() => setIsAttachOpen(true)}
           className="flex w-fit items-center gap-1.5 py-1 text-13 text-tertiary hover:text-secondary"
         >
-          <Plus className="size-4" /> {t("work_item_types.settings.linked_properties.add_button")}
+          <Plus className="size-4" /> Attach property
         </button>
       </div>
     </>

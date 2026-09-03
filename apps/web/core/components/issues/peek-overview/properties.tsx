@@ -30,6 +30,7 @@ import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
+import { WorkItemAdditionalSidebarProperties } from "@/components/issues/issue-detail/additional-properties";
 import { GithubLinksSection } from "@/components/issues/issue-detail/github-links";
 // helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -244,6 +245,14 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
         <SidebarPropertyListItem icon={LabelPropertyIcon} label={t("common.labels")}>
           <IssueLabel workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} disabled={disabled} />
         </SidebarPropertyListItem>
+
+        <WorkItemAdditionalSidebarProperties
+          workItemId={issueId}
+          workItemTypeId={issue?.type_id ?? null}
+          projectId={projectId}
+          workspaceSlug={workspaceSlug}
+          isEditable={!disabled}
+        />
 
         <GithubLinksSection workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
       </div>

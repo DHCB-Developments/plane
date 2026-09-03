@@ -54,31 +54,31 @@ class IssuePropertySerializer(BaseSerializer):
             "issue_type",
             "project",
             "options",
+            "link_id",
+            "is_archived",
+            "usage",
         ]
         read_only_fields = ["workspace", "project", "issue_type"]
+
+    # Link-level overlay (set by the views when a property is read through a
+    # type attachment) and library usage stats (set by the library view).
+    link_id = serializers.SerializerMethodField()
+    is_archived = serializers.BooleanField(read_only=True)
+    usage = serializers.SerializerMethodField()
+
+    def get_link_id(self, obj):
+        link_id = getattr(obj, "link_id", None)
+        return str(link_id) if link_id else None
+
+    def get_usage(self, obj):
+        return getattr(obj, "usage", None)
 
     def validate(self, attrs):
         # property_type is immutable after creation
         if self.instance and "property_type" in attrs and attrs["property_type"] != self.instance.property_type:
             raise serializers.ValidationError({"property_type": "Property type cannot be changed after creation"})
-
-        # Name must be unique within the set VISIBLE to this project
-        # (workspace-shared properties + this project's own).
-        display_name = attrs.get("display_name")
-        if display_name:
-            issue_type_id = self.context.get("issue_type_id") or getattr(self.instance, "issue_type_id", None)
-            project_id = self.context.get("project_id")
-            queryset = IssueProperty.objects.filter(
-                issue_type_id=issue_type_id,
-                display_name__iexact=display_name.strip(),
-                deleted_at__isnull=True,
-            ).filter(Q(project__isnull=True) | Q(project_id=project_id))
-            if self.instance is not None:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            if queryset.exists():
-                raise serializers.ValidationError(
-                    {"display_name": "A property with this name already exists on this type"}
-                )
+        # Names are deliberately NOT unique: the library may hold several
+        # "Branch" properties with different option sets for different projects.
 
         property_type = attrs.get("property_type", getattr(self.instance, "property_type", None))
         is_required = attrs.get("is_required", getattr(self.instance, "is_required", False))

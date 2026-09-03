@@ -13,6 +13,7 @@ import type {
   IIssueTypeAvailable,
   IIssueProperty,
   TIssueTypePayload,
+  TIssuePropertyImpact,
   TIssuePropertyPayload,
   TIssuePropertyValues,
 } from "@plane/types";
@@ -63,6 +64,28 @@ export interface IIssueTypesStore {
     propertyId: string,
     data: TIssuePropertyPayload
   ) => Promise<IIssueProperty>;
+  detachIssueProperty: (
+    workspaceSlug: string,
+    projectId: string,
+    issueTypeId: string,
+    propertyId: string,
+    clearValues: boolean
+  ) => Promise<void>;
+  // property library
+  libraryPropertiesMap: Record<string, IIssueProperty[]>;
+  getLibraryProperties: (workspaceSlug: string | null | undefined) => IIssueProperty[];
+  fetchLibraryProperties: (workspaceSlug: string, includeArchived?: boolean) => Promise<IIssueProperty[]>;
+  createLibraryProperty: (workspaceSlug: string, data: TIssuePropertyPayload) => Promise<IIssueProperty>;
+  updateLibraryProperty: (workspaceSlug: string, propertyId: string, data: TIssuePropertyPayload) => Promise<IIssueProperty>;
+  deleteLibraryProperty: (workspaceSlug: string, propertyId: string) => Promise<void>;
+  duplicateLibraryProperty: (workspaceSlug: string, propertyId: string) => Promise<IIssueProperty>;
+  getLibraryPropertyImpact: (workspaceSlug: string, propertyId: string) => Promise<TIssuePropertyImpact>;
+  getIssuePropertyDetachImpact: (
+    workspaceSlug: string,
+    projectId: string,
+    issueTypeId: string,
+    propertyId: string
+  ) => Promise<{ issues_with_values: number }>;
   deleteIssueProperty: (
     workspaceSlug: string,
     projectId: string,
@@ -88,6 +111,7 @@ export class IssueTypesStore implements IIssueTypesStore {
   fetchedMap: Record<string, boolean> = {};
   issuePropertiesMap: Record<string, IIssueProperty[]> = {};
   issuePropertyValuesMap: Record<string, TIssuePropertyValues> = {};
+  libraryPropertiesMap: Record<string, IIssueProperty[]> = {};
   // root store
   rootStore: RootStore;
   // services
@@ -109,6 +133,13 @@ export class IssueTypesStore implements IIssueTypesStore {
       importIssueType: action,
       issuePropertiesMap: observable,
       issuePropertyValuesMap: observable,
+      libraryPropertiesMap: observable,
+      fetchLibraryProperties: action,
+      createLibraryProperty: action,
+      updateLibraryProperty: action,
+      deleteLibraryProperty: action,
+      duplicateLibraryProperty: action,
+      detachIssueProperty: action,
       fetchIssueProperties: action,
       createIssueProperty: action,
       updateIssueProperty: action,
@@ -302,6 +333,90 @@ export class IssueTypesStore implements IIssueTypesStore {
       )
     );
   };
+
+  detachIssueProperty = async (
+    workspaceSlug: string,
+    projectId: string,
+    issueTypeId: string,
+    propertyId: string,
+    clearValues: boolean
+  ) => {
+    await this.issueTypeService.detachIssueProperty(workspaceSlug, projectId, issueTypeId, propertyId, clearValues);
+    runInAction(() =>
+      set(
+        this.issuePropertiesMap,
+        [issueTypeId],
+        (this.issuePropertiesMap[issueTypeId] ?? []).filter((p) => p.id !== propertyId)
+      )
+    );
+  };
+
+  getIssuePropertyDetachImpact = (workspaceSlug: string, projectId: string, issueTypeId: string, propertyId: string) =>
+    this.issueTypeService.getIssuePropertyDetachImpact(workspaceSlug, projectId, issueTypeId, propertyId);
+
+  // ----- property library -----
+  getLibraryProperties = computedFn((workspaceSlug: string | null | undefined) =>
+    workspaceSlug ? (this.libraryPropertiesMap[workspaceSlug] ?? []) : []
+  );
+
+  fetchLibraryProperties = async (workspaceSlug: string, includeArchived = false) => {
+    const properties = await this.issueTypeService.getLibraryProperties(workspaceSlug, includeArchived);
+    runInAction(() => set(this.libraryPropertiesMap, [workspaceSlug], properties));
+    return properties;
+  };
+
+  createLibraryProperty = async (workspaceSlug: string, data: TIssuePropertyPayload) => {
+    const property = await this.issueTypeService.createLibraryProperty(workspaceSlug, data);
+    runInAction(() =>
+      set(this.libraryPropertiesMap, [workspaceSlug], [...(this.libraryPropertiesMap[workspaceSlug] ?? []), property])
+    );
+    return property;
+  };
+
+  updateLibraryProperty = async (workspaceSlug: string, propertyId: string, data: TIssuePropertyPayload) => {
+    const property = await this.issueTypeService.updateLibraryProperty(workspaceSlug, propertyId, data);
+    runInAction(() => {
+      set(
+        this.libraryPropertiesMap,
+        [workspaceSlug],
+        (this.libraryPropertiesMap[workspaceSlug] ?? []).map((p) => (p.id === propertyId ? property : p))
+      );
+      // Definitions are shared by reference: refresh any loaded type lists too.
+      Object.keys(this.issuePropertiesMap).forEach((typeId) =>
+        set(
+          this.issuePropertiesMap,
+          [typeId],
+          this.issuePropertiesMap[typeId].map((p) => (p.id === propertyId ? { ...p, ...property, link_id: p.link_id, is_required: p.is_required, is_active: p.is_active, default_value: p.default_value, sort_order: p.sort_order } : p))
+        )
+      );
+    });
+    return property;
+  };
+
+  deleteLibraryProperty = async (workspaceSlug: string, propertyId: string) => {
+    await this.issueTypeService.deleteLibraryProperty(workspaceSlug, propertyId);
+    runInAction(() => {
+      set(
+        this.libraryPropertiesMap,
+        [workspaceSlug],
+        (this.libraryPropertiesMap[workspaceSlug] ?? []).filter((p) => p.id !== propertyId)
+      );
+      Object.keys(this.issuePropertiesMap).forEach((typeId) =>
+        set(this.issuePropertiesMap, [typeId], this.issuePropertiesMap[typeId].filter((p) => p.id !== propertyId))
+      );
+    });
+  };
+
+  duplicateLibraryProperty = async (workspaceSlug: string, propertyId: string) => {
+    const property = await this.issueTypeService.duplicateLibraryProperty(workspaceSlug, propertyId);
+    runInAction(() =>
+      set(this.libraryPropertiesMap, [workspaceSlug], [...(this.libraryPropertiesMap[workspaceSlug] ?? []), property])
+    );
+    return property;
+  };
+
+  getLibraryPropertyImpact = (workspaceSlug: string, propertyId: string) =>
+    this.issueTypeService.getLibraryPropertyImpact(workspaceSlug, propertyId);
 
   // ----- property values -----
   getIssuePropertyValues = computedFn((issueId: string | null | undefined) => {
